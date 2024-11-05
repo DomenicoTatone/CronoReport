@@ -1,0 +1,76 @@
+/* styles.css */
+
+/* Stili Globali */
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    background-color: #f4f6f8;
+    color: #333;
+}
+
+/* Stile per le card dei timer */
+.timer-card {
+    border: none;
+}
+
+.timer-card .card-title {
+    font-weight: bold;
+}
+
+.timer-card .timer-display {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.timer-card .btn-group .btn {
+    flex: 1;
+}
+
+.timer-card .btn-group .btn+.btn {
+    margin-left: 5px;
+}
+
+.timer-card .btn-link {
+    color: #007bff;
+}
+
+.timer-card .btn-link:hover {
+    text-decoration: underline;
+}
+
+.timer-card .badge {
+    font-size: 0.9rem;
+}
+
+/* Posizionamento dell'icona di spunta verde */
+.card.position-relative {
+    position: relative;
+}
+
+.checkmark-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.client-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.month-header {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-top: 1rem;
+}
+
+/* Assicura che il checkbox sia delle dimensioni corrette */
+.timer-checkbox {
+    width: 1.2em;
+    height: 1.2em;
+}
+
+/* Rimuove il bordo di default se necessario */
+.timer-checkbox:focus {
+    box-shadow: none;
+}

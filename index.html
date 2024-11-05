@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProReport</title>
+    <!-- Stili CSS -->
+    <link rel="stylesheet" href="menu.css">
+    <!-- Font Google -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap">
+    <!-- Icone Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- SweetAlert CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Tempus Dominus CSS -->
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/tempusdominus-bootstrap-4@5.39.0/build/css/tempusdominus-bootstrap-4.min.css" />
+    <!-- Stili CSS personalizzati -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Include del menu -->
+    <div id="menu-container"></div>
+
+    <!-- Sezione principale dell'app (visualizzata dopo l'accesso) -->
+    <div id="app-section">
+        <!-- Le sezioni Gestione Dati e Timer saranno mostrate in base alla selezione del menu -->
+        <div id="content-section">
+            <!-- Aggiunta del form per il Date-Time Picker -->
+            <div class="container mt-4">
+                <div class="form-group">
+                    <label for="manual-start-time">Ora di Inizio (opzionale):</label>
+                    <div class="input-group date" id="manual-start-time-picker" data-target-input="nearest">
+                        <input type="text" id="manual-start-time" class="form-control datetimepicker-input"
+                            data-target="#manual-start-time-picker" />
+                        <div class="input-group-append" data-target="#manual-start-time-picker"
+                            data-toggle="datetimepicker">
+                            <div class="input-group-text"><i class="far fa-calendar-alt"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="manual-end-time">Ora di Fine (opzionale):</label>
+                    <div class="input-group date" id="manual-end-time-picker" data-target-input="nearest">
+                        <input type="text" id="manual-end-time" class="form-control datetimepicker-input"
+                            data-target="#manual-end-time-picker" />
+                        <div class="input-group-append" data-target="#manual-end-time-picker"
+                            data-toggle="datetimepicker">
+                            <div class="input-group-text"><i class="far fa-calendar-alt"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Fine del form per il Date-Time Picker -->
+        </div>
+    </div>
+
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <!-- jQuery e Bootstrap JS per il menu -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <!-- Popper.js (necessario per Bootstrap e Tempus Dominus) -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- Moment.js con locali (necessario per Tempus Dominus) -->
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment-with-locales.min.js"></script>
+    <!-- Imposta la locale italiana -->
+    <script>
+        moment.locale('it');
+    </script>
+
+    <!-- Tempus Dominus JS -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/tempusdominus-bootstrap-4@5.39.0/build/js/tempusdominus-bootstrap-4.min.js"></script>
+
+    <!-- SweetAlert JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- jsPDF e jsPDF-AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- File di configurazione e logica -->
+    <script src="firebaseConfig.js"></script>
+    <script src="utils.js"></script>
+
+    <!-- Altri file JavaScript -->
+    <script src="timer.js"></script>
+    <script src="reportConfig.js"></script>
+    <script src="reportEvents.js"></script>
+    <script src="savedTimersUI.js"></script>
+    <script src="savedTimersData.js"></script>
+    <script src="savedTimersEvents.js"></script>
+    <script src="menu.js"></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
