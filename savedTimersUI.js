@@ -157,7 +157,7 @@ function createTimerRow(timerId, logData) {
     // Colonna per l'Azione Elimina
     const actionCell = document.createElement('td');
     const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('btn', 'btn-danger', 'btn-sm');
+    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', () => {
         deleteTimer(timerId, row);
@@ -218,7 +218,7 @@ function createRecycleBinRow(timerId, logData) {
     });
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('btn', 'btn-danger', 'btn-sm');
+    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', () => {
         permanentlyDeleteTimer(timerId, row);
