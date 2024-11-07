@@ -43,6 +43,8 @@ function initializeReportHistoryEvents() {
                 } else {
                     snapshot.forEach(doc => {
                         const reportData = doc.data();
+                        const reportId = doc.id; // Ottieni l'ID del report
+
                         const li = document.createElement('li');
                         li.classList.add('list-group-item');
 
@@ -52,12 +54,57 @@ function initializeReportHistoryEvents() {
                         const reportTitle = document.createElement('span');
                         reportTitle.textContent = reportData.reportName || 'Report';
 
+                        const actionButtonsDiv = document.createElement('div');
+
                         const toggleButton = document.createElement('button');
-                        toggleButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
+                        toggleButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'mr-2');
                         toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
+                        const deleteButton = document.createElement('button');
+                        deleteButton.classList.add('btn', 'btn-sm', 'p-1');
+                        deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
+
+                        // Evento per eliminare il report
+                        deleteButton.addEventListener('click', () => {
+                            Swal.fire({
+                                title: 'Sei sicuro?',
+                                text: 'Vuoi eliminare questo report?',
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#6c757d',
+                                confirmButtonText: 'Sì, elimina!',
+                                cancelButtonText: 'Annulla'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    db.collection('reports').doc(reportId).delete()
+                                        .then(() => {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Eliminato!',
+                                                text: 'Il report è stato eliminato.',
+                                                confirmButtonText: 'OK'
+                                            });
+                                            loadReportHistory(); // Ricarica la lista dopo l'eliminazione
+                                        })
+                                        .catch(error => {
+                                            console.error('Errore durante l\'eliminazione del report:', error);
+                                            Swal.fire({
+                                                icon: 'error',
+                                                title: 'Errore',
+                                                text: 'Si è verificato un errore durante l\'eliminazione del report.',
+                                                confirmButtonText: 'OK'
+                                            });
+                                        });
+                                }
+                            });
+                        });
+
+                        actionButtonsDiv.appendChild(toggleButton);
+                        actionButtonsDiv.appendChild(deleteButton);
+
                         headerDiv.appendChild(reportTitle);
-                        headerDiv.appendChild(toggleButton);
+                        headerDiv.appendChild(actionButtonsDiv);
 
                         const detailsDiv = document.createElement('div');
                         detailsDiv.style.display = 'none';
