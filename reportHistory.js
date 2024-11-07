@@ -11,9 +11,9 @@ const reportHistoryTemplate = `
                 <i class="fas fa-sync-alt"></i> Aggiorna
             </button>
         </div>
-        <ul id="report-history-list" class="list-group list-group-flush">
+        <div class="accordion" id="reportHistoryAccordion">
             <!-- Report saranno popolati dinamicamente -->
-        </ul>
+        </div>
     </div>
 </div>
 `;
@@ -22,50 +22,53 @@ const reportHistoryTemplate = `
  * Funzione per inizializzare gli eventi della sezione Storico Report
  */
 function initializeReportHistoryEvents() {
-    const reportHistoryList = document.getElementById('report-history-list');
+    const reportHistoryAccordion = document.getElementById('reportHistoryAccordion');
     const refreshReportHistoryBtn = document.getElementById('refresh-report-history-btn');
 
     /**
      * Funzione per caricare lo storico dei report
      */
     function loadReportHistory() {
-        reportHistoryList.innerHTML = ''; // Svuota la lista
+        reportHistoryAccordion.innerHTML = ''; // Svuota la lista
         db.collection('reports')
             .where('uid', '==', currentUser.uid)
             .orderBy('timestamp', 'desc')
             .get()
             .then(snapshot => {
                 if (snapshot.empty) {
-                    const li = document.createElement('li');
-                    li.classList.add('list-group-item');
-                    li.textContent = 'Nessun report disponibile.';
-                    reportHistoryList.appendChild(li);
+                    const emptyMessage = document.createElement('div');
+                    emptyMessage.classList.add('card-body');
+                    emptyMessage.textContent = 'Nessun report disponibile.';
+                    reportHistoryAccordion.appendChild(emptyMessage);
                 } else {
-                    snapshot.forEach(doc => {
+                    snapshot.forEach((doc) => { // Rimosso 'index'
                         const reportData = doc.data();
                         const reportId = doc.id; // Ottieni l'ID del report
 
-                        const li = document.createElement('li');
-                        li.classList.add('list-group-item');
+                        // Crea gli elementi per l'accordion item
+                        const card = document.createElement('div');
+                        card.classList.add('card');
 
-                        const headerDiv = document.createElement('div');
-                        headerDiv.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                        const cardHeader = document.createElement('div');
+                        cardHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
+                        cardHeader.id = `heading-${reportId}`;
 
-                        const reportTitle = document.createElement('span');
-                        reportTitle.textContent = reportData.reportName || 'Report';
-
-                        const actionButtonsDiv = document.createElement('div');
-
-                        const toggleButton = document.createElement('button');
-                        toggleButton.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'mr-2');
-                        toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                        const headerButton = document.createElement('button');
+                        headerButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
+                        // Verifica la versione di Bootstrap e usa gli attributi corretti
+                        headerButton.setAttribute('data-toggle', 'collapse'); // Usa 'data-bs-toggle' per Bootstrap 5
+                        headerButton.setAttribute('data-target', `#collapse-${reportId}`); // Usa 'data-bs-target' per Bootstrap 5
+                        headerButton.setAttribute('aria-expanded', 'false');
+                        headerButton.setAttribute('aria-controls', `collapse-${reportId}`);
+                        headerButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${reportData.reportName || 'Report'}`;
 
                         const deleteButton = document.createElement('button');
                         deleteButton.classList.add('btn', 'btn-sm', 'p-1');
                         deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
 
                         // Evento per eliminare il report
-                        deleteButton.addEventListener('click', () => {
+                        deleteButton.addEventListener('click', (e) => {
+                            e.stopPropagation(); // Previene l'apertura/chiusura dell'accordion
                             Swal.fire({
                                 title: 'Sei sicuro?',
                                 text: 'Vuoi eliminare questo report?',
@@ -100,15 +103,20 @@ function initializeReportHistoryEvents() {
                             });
                         });
 
-                        actionButtonsDiv.appendChild(toggleButton);
-                        actionButtonsDiv.appendChild(deleteButton);
+                        const headerActions = document.createElement('div');
+                        headerActions.appendChild(deleteButton);
 
-                        headerDiv.appendChild(reportTitle);
-                        headerDiv.appendChild(actionButtonsDiv);
+                        cardHeader.appendChild(headerButton);
+                        cardHeader.appendChild(headerActions);
 
-                        const detailsDiv = document.createElement('div');
-                        detailsDiv.style.display = 'none';
-                        detailsDiv.classList.add('mt-2');
+                        const collapseDiv = document.createElement('div');
+                        collapseDiv.id = `collapse-${reportId}`;
+                        collapseDiv.classList.add('collapse');
+                        collapseDiv.setAttribute('aria-labelledby', `heading-${reportId}`);
+                        collapseDiv.setAttribute('data-parent', '#reportHistoryAccordion');
+
+                        const cardBody = document.createElement('div');
+                        cardBody.classList.add('card-body');
 
                         // Aggiungi i dettagli del report
                         const reportDetails = document.createElement('p');
@@ -132,24 +140,23 @@ function initializeReportHistoryEvents() {
                             regenerateAndDownloadReport(reportData);
                         });
 
-                        detailsDiv.appendChild(reportDetails);
-                        detailsDiv.appendChild(downloadBtn);
+                        cardBody.appendChild(reportDetails);
+                        cardBody.appendChild(downloadBtn);
 
-                        li.appendChild(headerDiv);
-                        li.appendChild(detailsDiv);
+                        collapseDiv.appendChild(cardBody);
 
-                        // Evento per mostrare/nascondere i dettagli
-                        toggleButton.addEventListener('click', () => {
-                            if (detailsDiv.style.display === 'none') {
-                                detailsDiv.style.display = 'block';
-                                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i>';
-                            } else {
-                                detailsDiv.style.display = 'none';
-                                toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                            }
+                        card.appendChild(cardHeader);
+                        card.appendChild(collapseDiv);
+
+                        reportHistoryAccordion.appendChild(card);
+
+                        // Aggiungi evento per cambiare l'icona al clic
+                        $(collapseDiv).on('show.bs.collapse', function () {
+                            headerButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${reportData.reportName || 'Report'}`;
                         });
-
-                        reportHistoryList.appendChild(li);
+                        $(collapseDiv).on('hide.bs.collapse', function () {
+                            headerButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${reportData.reportName || 'Report'}`;
+                        });
                     });
                 }
             })
