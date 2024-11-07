@@ -8,11 +8,14 @@ const db = firebase.firestore();
 let currentUser = null;
 
 // Listener per lo stato di autenticazione
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
+        console.log("Utente autenticato:", currentUser.uid);
         // Carica la sezione predefinita
         loadSection('data-management');
+        // Inizializza i timer solo dopo che l'utente è confermato autenticato
+        await initializeTimerEvents();
     } else {
         currentUser = null;
         // Reindirizza a login.html se non autenticato
@@ -145,6 +148,10 @@ function loadSection(section) {
         case 'report-history':
             contentSection.innerHTML = reportHistoryTemplate;
             initializeReportHistoryEvents();
+            break;
+        case 'dashboard':
+            // Carica il template della dashboard
+            initializeDashboardEvents();
             break;
         // aggiungi altri case se necessario
         default:

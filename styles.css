@@ -74,3 +74,8 @@ body {
 .timer-checkbox:focus {
     box-shadow: none;
 }
+
+#worktypeDistributionChart {
+    max-height: 300px; /* Imposta l'altezza massima del grafico */
+    margin: 0 auto; /* Centra il grafico */
+}

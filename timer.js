@@ -14,7 +14,6 @@ let timerCardsContainer;
 let activeTimers = [];
 
 // Template per la sezione Timer
-// Template per la sezione Timer di Lavoro
 const timerTemplate = `
 <div id="timer-section" class="container mt-5">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">Timer di Lavoro</h2>
@@ -68,26 +67,14 @@ const timerTemplate = `
                 </div>
                 <div class="card-body">
                     <!-- Ora di Inizio -->
-                    <div class="datetime-picker-container">
-                        <div class="form-group">
-                            <label for="manual-start-time" class="font-weight-bold">Ora di Inizio (opzionale):</label>
-                            <div class="input-group date" id="manual-start-time-picker" data-target-input="nearest">
-                                <input type="text" id="manual-start-time" class="form-control datetimepicker-input" data-target="#manual-start-time-picker"/>
-                                <div class="input-group-append" data-target="#manual-start-time-picker" data-toggle="datetimepicker">
-                                    <div class="input-group-text"><i class="far fa-calendar-alt"></i></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Ora di Fine -->
-                        <div class="form-group">
-                            <label for="manual-end-time" class="font-weight-bold">Ora di Fine (opzionale):</label>
-                            <div class="input-group date" id="manual-end-time-picker" data-target-input="nearest">
-                                <input type="text" id="manual-end-time" class="form-control datetimepicker-input" data-target="#manual-end-time-picker"/>
-                                <div class="input-group-append" data-target="#manual-end-time-picker" data-toggle="datetimepicker">
-                                    <div class="input-group-text"><i class="far fa-calendar-alt"></i></div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="manual-start-time" class="font-weight-bold">Ora di Inizio (opzionale):</label>
+                        <input type="text" id="manual-start-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss" />
+                    </div>
+                    <!-- Ora di Fine -->
+                    <div class="form-group">
+                        <label for="manual-end-time" class="font-weight-bold">Ora di Fine (opzionale):</label>
+                        <input type="text" id="manual-end-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss" />
                     </div>
                     <!-- Pulsante Avvia Timer -->
                     <button id="start-timer-btn" class="btn btn-success btn-block mt-4"><i class="fas fa-play mr-2"></i>Avvia Timer</button>
@@ -106,9 +93,21 @@ const timerTemplate = `
 </div>
 `;
 
-
 // Funzione per inizializzare gli eventi della sezione Timer
-function initializeTimerEvents() {
+async function initializeTimerEvents() {
+    if (!currentUser) {
+        console.error("Utente non autenticato: currentUser è null in initializeTimerEvents.");
+        return; // Esci se currentUser non è definito
+    }
+    console.log("Utente autenticato in initializeTimerEvents:", currentUser.uid);
+    
+    // Inserimento del template nel DOM
+    const timerDiv = document.createElement('div');
+    timerDiv.id = 'timer-template';
+    timerDiv.style.display = 'none';
+    timerDiv.innerHTML = timerTemplate;
+    document.body.appendChild(timerDiv);
+
     // Elementi DOM - assegnazione delle variabili
     clientSelect = document.getElementById('client-select');
     siteSelect = document.getElementById('site-select');
@@ -119,45 +118,31 @@ function initializeTimerEvents() {
     startTimerBtn = document.getElementById('start-timer-btn');
     timerCardsContainer = document.getElementById('timer-cards');
 
-    $(function () {
-        $('#manual-start-time-picker').datetimepicker({
-            icons: {
-                time: 'far fa-clock',
-                date: 'far fa-calendar-alt',
-                up: 'fas fa-chevron-up',
-                down: 'fas fa-chevron-down',
-                previous: 'fas fa-chevron-left',
-                next: 'fas fa-chevron-right',
-                today: 'far fa-calendar-check',
-                clear: 'far fa-trash-alt',
-                close: 'fas fa-times'
-            },
-            locale: 'it',
-            format: 'DD/MM/YYYY HH:mm',
-        });
-        $('#manual-end-time-picker').datetimepicker({
-            useCurrent: false,
-            icons: {
-                time: 'far fa-clock',
-                date: 'far fa-calendar-alt',
-                up: 'fas fa-chevron-up',
-                down: 'fas fa-chevron-down',
-                previous: 'fas fa-chevron-left',
-                next: 'fas fa-chevron-right',
-                today: 'far fa-calendar-check',
-                clear: 'far fa-trash-alt',
-                close: 'fas fa-times'
-            },
-            locale: 'it',
-            format: 'DD/MM/YYYY HH:mm',
-        });
-        // Collegamento tra i due picker per evitare incongruenze nelle date
-        $("#manual-start-time-picker").on("change.datetimepicker", function (e) {
-            $('#manual-end-time-picker').datetimepicker('minDate', e.date);
-        });
-        $("#manual-end-time-picker").on("change.datetimepicker", function (e) {
-            $('#manual-start-time-picker').datetimepicker('maxDate', e.date);
-        });
+    // Inizializza Flatpickr con supporto per i secondi e locale italiana
+    const manualStartTimePicker = flatpickr(manualStartTimeInput, {
+        enableTime: true,
+        enableSeconds: true,
+        time_24hr: true,
+        dateFormat: "d/m/Y H:i:S",
+        locale: "it",
+        onChange: function (selectedDates, dateStr, instance) {
+            if (selectedDates.length > 0) {
+                manualEndTimePicker.set('minDate', selectedDates[0]);
+            }
+        }
+    });
+
+    const manualEndTimePicker = flatpickr(manualEndTimeInput, {
+        enableTime: true,
+        enableSeconds: true,
+        time_24hr: true,
+        dateFormat: "d/m/Y H:i:S",
+        locale: "it",
+        onChange: function (selectedDates, dateStr, instance) {
+            if (selectedDates.length > 0) {
+                manualStartTimePicker.set('maxDate', selectedDates[0]);
+            }
+        }
     });
 
     // Carica i Clienti
@@ -240,7 +225,8 @@ function initializeTimerEvents() {
                     lastStartTime: timerData.lastStartTime ? timerData.lastStartTime.toDate() : new Date(),
                     isPaused: timerData.isPaused || false,
                     intervalId: null,
-                    timerDisplay: null
+                    timerDisplay: null,
+                    hourlyRate: timerData.hourlyRate || 0 // Assicurati che hourlyRate sia definito
                 };
 
                 // Aggiungi il timer all'array dei timer attivi
@@ -286,17 +272,86 @@ function loadClients(selectElement) {
         });
 }
 
+// Funzione per caricare i Siti nel Dropdown del Timer
+function loadSites(selectElement, clientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    db.collection('sites')
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', clientId)
+        .get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = doc.data().name;
+                selectElement.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento dei siti nel Timer:', error);
+        });
+}
+
+// Funzione per caricare i Tipi di Lavoro nel Dropdown del Timer
+function loadWorktypes(selectElement, clientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
+    db.collection('worktypes')
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', clientId)
+        .get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const option = document.createElement('option');
+                option.value = doc.id;
+                option.textContent = doc.data().name;
+                selectElement.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento dei tipi di lavoro nel Timer:', error);
+        });
+}
+
 // Funzione per analizzare la data e l'ora in formato locale con secondi
 function parseLocalDateTime(s) {
     // Si aspetta una stringa nel formato 'DD/MM/YYYY HH:mm:ss'
     const [datePart, timePart] = s.split(' ');
+    if (!datePart || !timePart) return null;
     const [day, month, year] = datePart.split('/').map(Number);
     const [hour, minute, second] = timePart.split(':').map(Number);
+    if (
+        isNaN(day) || isNaN(month) || isNaN(year) ||
+        isNaN(hour) || isNaN(minute) || isNaN(second)
+    ) {
+        return null;
+    }
     return new Date(year, month - 1, day, hour, minute, second);
 }
 
+// Funzione per recuperare hourlyRate dal report configuration
+async function getHourlyRate() {
+    try {
+        const snapshot = await db.collection('reportConfigs')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .get();
+
+        if (!snapshot.empty) {
+            const config = snapshot.docs[0].data();
+            console.log('Report Config:', config);
+            return typeof config.hourlyRate === 'number' ? config.hourlyRate : 0;
+        }
+        console.warn('Nessuna configurazione di report trovata, impostato hourlyRate a 0.');
+        return 0;
+    } catch (error) {
+        console.error('Errore nel recuperare hourlyRate:', error);
+        return 0;
+    }
+}
+
 // Funzione per creare un nuovo timer
-function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue) {
+async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue) {
     // Recupera i nomi dei campi selezionati
     const clientName = clientSelect.options[clientSelect.selectedIndex].text;
     const siteName = siteSelect.options[siteSelect.selectedIndex].text;
@@ -306,11 +361,31 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
     const manualStartTime = manualStartTimeValue ? parseLocalDateTime(manualStartTimeValue) : null;
     const manualEndTime = manualEndTimeValue ? parseLocalDateTime(manualEndTimeValue) : null;
 
-    // Aggiunta di console.log per debug
+    // Aggiungi console.log per debug
     console.log('manualStartTimeValue:', manualStartTimeValue);
     console.log('manualStartTime:', manualStartTime);
     console.log('manualEndTimeValue:', manualEndTimeValue);
     console.log('manualEndTime:', manualEndTime);
+
+    // Controlla se le date sono valide
+    if (manualStartTimeValue && !manualStartTime) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'L\'ora di inizio inserita non è valida.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+    if (manualEndTimeValue && !manualEndTime) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'L\'ora di fine inserita non è valida.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
 
     if (manualStartTime && manualEndTime) {
         // **Caso 1:** L'utente ha specificato sia l'ora di inizio che di fine
@@ -327,7 +402,17 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             return;
         }
 
-        // Salva direttamente il log nel database
+        // Recupera l'hourlyRate
+        let hourlyRate = await getHourlyRate();
+        console.log('Hourly Rate:', hourlyRate);
+
+        // Verifica che hourlyRate sia un numero
+        if (typeof hourlyRate !== 'number') {
+            hourlyRate = 0;
+            console.warn('Hourly Rate non valido, impostato a 0.');
+        }
+
+        // Salva direttamente il log nel database, includendo hourlyRate
         db.collection('timeLogs').add({
             uid: currentUser.uid,
             clientId: clientId,
@@ -336,12 +421,13 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             clientName: clientName,
             siteName: siteName,
             worktypeName: worktypeName,
-            link: link,
+            link: link || '',
             startTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
             endTime: firebase.firestore.Timestamp.fromDate(manualEndTime),
             duration: durationInSeconds,
-            isReported: false, // Aggiungi questo campo se necessario
-            isDeleted: false // **Aggiungi questo campo**
+            isReported: false,
+            isDeleted: false,
+            hourlyRate: hourlyRate // Assicurati che hourlyRate sia definito
         }).then(() => {
             Swal.fire({
                 icon: 'success',
@@ -376,6 +462,16 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
         // Invece, imposta accumulatedElapsedTime a zero
         const accumulatedElapsedTime = 0;
 
+        // Recupera l'hourlyRate
+        let hourlyRate = await getHourlyRate();
+        console.log('Hourly Rate:', hourlyRate);
+
+        // Verifica che hourlyRate sia un numero
+        if (typeof hourlyRate !== 'number') {
+            hourlyRate = 0;
+            console.warn('Hourly Rate non valido, impostato a 0.');
+        }
+
         // Crea un oggetto timer
         const timer = {
             clientId: clientId,
@@ -389,7 +485,8 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             lastStartTime: manualStartTime, // Imposta lastStartTime a manualStartTime
             isPaused: false,
             intervalId: null,
-            timerDisplay: null
+            timerDisplay: null,
+            hourlyRate: hourlyRate // Assicurati di aggiungere hourlyRate
         };
 
         // Salva il timer su Firestore
@@ -401,11 +498,12 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             clientName: clientName,
             siteName: siteName,
             worktypeName: worktypeName,
-            link: link,
+            link: link || '',
             accumulatedElapsedTime: timer.accumulatedElapsedTime,
             lastStartTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
             isPaused: timer.isPaused,
-            isActive: true
+            isActive: true,
+            hourlyRate: hourlyRate // Assicurati di aggiungere hourlyRate
         }).then(docRef => {
             timer.id = docRef.id;
             activeTimers.push(timer);
@@ -414,6 +512,12 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             startTimer(timer);
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante il salvataggio del timer.',
+                confirmButtonText: 'OK'
+            });
         });
 
     } else {
@@ -431,8 +535,20 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             lastStartTime: new Date(),
             isPaused: false,
             intervalId: null,
-            timerDisplay: null
+            timerDisplay: null,
+            hourlyRate: await getHourlyRate() // Assicurati di aggiungere hourlyRate
         };
+
+        // Recupera l'hourlyRate
+        let hourlyRate = timer.hourlyRate;
+        console.log('Hourly Rate:', hourlyRate);
+
+        // Verifica che hourlyRate sia un numero
+        if (typeof hourlyRate !== 'number') {
+            hourlyRate = 0;
+            timer.hourlyRate = 0;
+            console.warn('Hourly Rate non valido, impostato a 0.');
+        }
 
         // Salva il timer su Firestore
         db.collection('timers').add({
@@ -443,11 +559,12 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             clientName: clientName,
             siteName: siteName,
             worktypeName: worktypeName,
-            link: link,
+            link: link || '',
             accumulatedElapsedTime: timer.accumulatedElapsedTime,
             lastStartTime: firebase.firestore.FieldValue.serverTimestamp(),
             isPaused: timer.isPaused,
-            isActive: true
+            isActive: true,
+            hourlyRate: hourlyRate // Assicurati di aggiungere hourlyRate
         }).then(docRef => {
             timer.id = docRef.id;
             activeTimers.push(timer);
@@ -456,6 +573,12 @@ function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue
             startTimer(timer);
         }).catch(error => {
             console.error('Errore nel salvataggio del timer:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante il salvataggio del timer.',
+                confirmButtonText: 'OK'
+            });
         });
     }
 }
@@ -497,7 +620,7 @@ function createTimerCard(timer) {
     // Display del timer
     const timerDisplay = document.createElement('h4');
     timerDisplay.classList.add('timer-display', 'mb-3');
-    timerDisplay.textContent = '00h 00m 00s';
+    timerDisplay.textContent = formatDuration(timer.accumulatedElapsedTime);
 
     // Sezione link (se presente)
     const linkElement = document.createElement('p');
@@ -632,7 +755,7 @@ function stopTimer(timer, card) {
     console.log('Total Elapsed Time (secondi):', totalElapsedTime);
 
     // Salva il log del tempo nel database, includendo i nomi e il link
-    db.collection('timeLogs').add({
+    const timeLogData = {
         uid: currentUser.uid,
         clientId: timer.clientId,
         siteId: timer.siteId,
@@ -640,51 +763,70 @@ function stopTimer(timer, card) {
         clientName: timer.clientName,
         siteName: timer.siteName,
         worktypeName: timer.worktypeName,
-        link: timer.link,
+        link: timer.link || '',
         startTime: firebase.firestore.Timestamp.fromDate(startTime),
         endTime: firebase.firestore.Timestamp.fromDate(now),
         duration: totalElapsedTime,
-        isReported: false, // Aggiungi questo campo se necessario
-        isDeleted: false // **Aggiungi questo campo**
-    }).then(() => {
-        // Aggiorna il timer su Firestore per indicare che non è più attivo
-        db.collection('timers').doc(timer.id).update({
-            isActive: false,
-            endTime: firebase.firestore.FieldValue.serverTimestamp(),
-            totalElapsedTime: totalElapsedTime
-        }).then(() => {
-            // Rimuovi il timer dall'array dei timer attivi
-            const index = activeTimers.indexOf(timer);
-            if (index > -1) {
-                activeTimers.splice(index, 1);
-            }
+        isReported: false,
+        isDeleted: false,
+        hourlyRate: typeof timer.hourlyRate === 'number' ? timer.hourlyRate : 0 // Assicurati che hourlyRate sia definito
+    };
 
-            // Rimuovi la scheda dal DOM
-            card.remove();
-
-            Swal.fire({
-                icon: 'success',
-                title: 'Timer Salvato',
-                text: 'Il tempo è stato registrato con successo.',
-                confirmButtonText: 'OK'
-            });
-        }).catch(error => {
-            console.error('Errore nell\'aggiornamento del timer:', error);
-        });
-    }).catch(error => {
-        console.error('Errore nell\'aggiunta del log del tempo:', error);
+    // Controlla se `hourlyRate` è definito
+    if (typeof timeLogData.hourlyRate !== 'number') {
         Swal.fire({
             icon: 'error',
             title: 'Errore',
-            text: 'Si è verificato un errore durante il salvataggio del tempo.',
+            text: 'La tariffa oraria non è valida.',
             confirmButtonText: 'OK'
         });
-    });
+        return;
+    }
+
+    db.collection('timeLogs').add(timeLogData)
+        .then(() => {
+            // Aggiorna il timer su Firestore per indicare che non è più attivo
+            db.collection('timers').doc(timer.id).update({
+                isActive: false,
+                endTime: firebase.firestore.FieldValue.serverTimestamp(),
+                totalElapsedTime: totalElapsedTime
+            }).then(() => {
+                // Rimuovi il timer dall'array dei timer attivi
+                const index = activeTimers.indexOf(timer);
+                if (index > -1) {
+                    activeTimers.splice(index, 1);
+                }
+
+                // Rimuovi la scheda dal DOM
+                card.remove();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Timer Salvato',
+                    text: 'Il tempo è stato registrato con successo.',
+                    confirmButtonText: 'OK'
+                });
+            }).catch(error => {
+                console.error('Errore nell\'aggiornamento del timer:', error);
+            });
+        }).catch(error => {
+            console.error('Errore nell\'aggiunta del log del tempo:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante il salvataggio del tempo.',
+                confirmButtonText: 'OK'
+            });
+        });
 }
 
-// Inserimento del template nel DOM
-const timerDiv = document.createElement('div');
-timerDiv.id = 'timer-template';
-timerDiv.style.display = 'none';
-timerDiv.innerHTML = timerTemplate;
-document.body.appendChild(timerDiv);
+// Funzione per formattare la durata in ore, minuti e secondi
+function formatDuration(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hrs.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+}
+
+// Avvia l'inizializzazione degli eventi quando il DOM è pronto
+document.addEventListener('DOMContentLoaded', initializeTimerEvents);
