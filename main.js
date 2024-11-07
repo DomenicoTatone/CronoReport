@@ -132,13 +132,17 @@ function loadSection(section) {
             contentSection.innerHTML = savedTimersTemplate;
             initializeSavedTimersEvents();
             break;
-        case 'recycle-bin': // Aggiungi questa condizione
+        case 'recycle-bin':
             contentSection.innerHTML = recycleBinTemplate;
             initializeRecycleBinEvents();
             break;
         case 'report':
             contentSection.innerHTML = reportTemplate;
             initializeReportEvents();
+            break;
+        case 'report-history':
+            contentSection.innerHTML = reportHistoryTemplate;
+            initializeReportHistoryEvents();
             break;
         // aggiungi altri case se necessario
         default:
@@ -639,40 +643,3 @@ dataManagementDiv.id = 'data-management-template';
 dataManagementDiv.style.display = 'none';
 dataManagementDiv.innerHTML = dataManagementTemplate;
 document.body.appendChild(dataManagementDiv);
-
-/**
- * Funzione per caricare le sezioni in base al menu
- * Mantiene l'implementazione originale per garantire la compatibilità
- */
-function loadSection(section) {
-    const contentSection = document.getElementById('content-section');
-    contentSection.innerHTML = ''; // Svuota la sezione di contenuto
-
-    switch (section) {
-        case 'data-management':
-            contentSection.innerHTML = dataManagementTemplate;
-            initializeDataManagementEvents();
-            break;
-        case 'timer':
-            contentSection.innerHTML = timerTemplate;
-            initializeTimerEvents();
-            break;
-        case 'saved-timers':
-            contentSection.innerHTML = savedTimersTemplate;
-            initializeSavedTimersEvents();
-            break;
-        case 'recycle-bin': // Aggiungi questa condizione
-            contentSection.innerHTML = savedTimersTemplate; // Usa lo stesso template
-            document.getElementById('saved-timers-section').style.display = 'none';
-            document.getElementById('recycle-bin-section').style.display = 'block';
-            loadRecycleBin(); // Carica i dati del cestino
-            break;
-        case 'report':
-            contentSection.innerHTML = reportTemplate;
-            initializeReportEvents();
-            break;
-        // aggiungi altri case se necessario
-        default:
-            contentSection.innerHTML = '<p>Sezione non trovata.</p>';
-    }
-}

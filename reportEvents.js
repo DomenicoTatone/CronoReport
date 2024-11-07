@@ -4,7 +4,7 @@
 let savedConfigSelect;
 let deleteConfigBtn;
 let configNameInput;
-let companyLogoInput; 
+let companyLogoInput;
 
 // Funzione per inizializzare gli eventi della sezione Report
 function initializeReportEvents() {
@@ -334,6 +334,54 @@ function setupReportSection() {
                 // Aggiungi event listeners per i pulsanti di download
                 downloadPdfBtn.onclick = () => generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64);
                 downloadCsvBtn.onclick = () => generateCSV(reportHeader, reportData);
+
+                // --- Inizio Aggiornamento: Salva i dettagli del report nel database ---
+                // Ottieni i nomi del cliente, sito e tipo di lavoro per mostrarli nello storico
+                let filterClientName = '';
+                let filterSiteName = '';
+                let filterWorktypeName = '';
+
+                const clientSelect = document.getElementById('filter-client');
+                const siteSelect = document.getElementById('filter-site');
+                const worktypeSelect = document.getElementById('filter-worktype');
+
+                if (clientSelect.value) {
+                    filterClientName = clientSelect.options[clientSelect.selectedIndex].text;
+                }
+                if (siteSelect.value) {
+                    filterSiteName = siteSelect.options[siteSelect.selectedIndex].text;
+                }
+                if (worktypeSelect.value) {
+                    filterWorktypeName = worktypeSelect.options[worktypeSelect.selectedIndex].text;
+                }
+
+                // Salva i dettagli del report nel database
+                const reportDetails = {
+                    uid: currentUser.uid,
+                    reportHeader: reportHeader,
+                    hourlyRate: hourlyRate,
+                    startDate: startDateInputVal,
+                    endDate: endDateInputVal,
+                    filterClient: filterClient || null,
+                    filterSite: filterSite || null,
+                    filterWorktype: filterWorktype || null,
+                    filterClientName: filterClientName,
+                    filterSiteName: filterSiteName,
+                    filterWorktypeName: filterWorktypeName,
+                    totalAmount: totalAmount,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    companyLogoBase64: companyLogoBase64,
+                    reportName: reportHeader + ' - ' + startDateInputVal + ' a ' + endDateInputVal
+                };
+
+                db.collection('reports').add(reportDetails)
+                    .then(() => {
+                        console.log('Report salvato nello storico.');
+                    })
+                    .catch(error => {
+                        console.error('Errore nel salvataggio del report nello storico:', error);
+                    });
+                // --- Fine Aggiornamento ---
 
             })
             .catch(error => {
