@@ -20,6 +20,30 @@ i {
     color: #fff;
 }
 
+.navbar-logo img {
+    vertical-align: middle;
+    margin-right: 8px;
+    width: 40px !important;
+    height: 50px !important;
+    padding-bottom: 10px;
+}
+
+/* Stile per il testo "CronoReport" */
+.navbar-title {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #ffffff;
+    letter-spacing: 1px;
+    text-transform: capitalize;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+
+.navbar-title:hover {
+    transform: scale(1.1);
+}
+
 .navbar-mainbg {
     background-color: #5161ce;
     padding: .5rem 1rem 0 1rem !important;
@@ -68,7 +92,7 @@ i {
     left: 0px;
     transition-duration: 0.6s;
     transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    background-color: #fff;
+    background-color: #f4f6f8;
     border-top-left-radius: 15px;
     border-top-right-radius: 15px;
     margin-top: 10px;
@@ -79,7 +103,7 @@ i {
     position: absolute;
     width: 25px;
     height: 25px;
-    background-color: #fff;
+    background-color: #f4f6f8;
     bottom: 10px;
 }
 
@@ -111,7 +135,7 @@ i {
     left: -25px;
 }
 
-@media (min-width: 992px) {
+@media (min-width: 1265px) {
     .navbar-expand-custom {
         flex-flow: row nowrap;
         justify-content: flex-start;
@@ -131,7 +155,7 @@ i {
     }
 }
 
-@media (max-width: 991px) {
+@media (max-width: 1264px) {
     #navbarSupportedContent ul li a {
         padding: 12px 30px;
     }
