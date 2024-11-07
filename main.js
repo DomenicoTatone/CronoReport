@@ -133,8 +133,10 @@ function loadSection(section) {
             initializeSavedTimersEvents();
             break;
         case 'recycle-bin':
-            contentSection.innerHTML = recycleBinTemplate;
-            initializeRecycleBinEvents();
+            contentSection.innerHTML = savedTimersTemplate; // Usa lo stesso template
+            document.getElementById('saved-timers-section').style.display = 'none';
+            document.getElementById('recycle-bin-section').style.display = 'block';
+            loadRecycleBin();
             break;
         case 'report':
             contentSection.innerHTML = reportTemplate;
