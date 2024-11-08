@@ -349,3 +349,164 @@ function deleteTimersInBatches(query, onComplete, onError) {
             onError(error);
         });
 }
+
+// Funzione per eliminare definitivamente tutti i timer di un cliente dal cestino
+function permanentlyDeleteClientTimers(clientName, clientElement) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: `Vuoi eliminare definitivamente tutti i timer per il cliente "${clientName}"? Questa operazione non può essere annullata.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina definitivamente!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const query = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('clientName', '==', clientName)
+                .where('isDeleted', '==', true);
+
+            deleteTimersPermanentlyInBatches(query,
+                () => {
+                    clientElement.remove();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cliente Eliminato',
+                        text: `Tutti i timer per "${clientName}" sono stati eliminati definitivamente.`,
+                        confirmButtonText: 'OK'
+                    });
+                },
+                (error) => {
+                    console.error('Errore durante l\'eliminazione definitiva dei timer del cliente:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante l\'eliminazione definitiva dei timer.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            );
+        }
+    });
+}
+
+// Funzione per eliminare definitivamente tutti i timer di un anno specifico dal cestino
+function permanentlyDeleteYearTimers(clientName, year, yearElement) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: `Vuoi eliminare definitivamente tutti i timer per l'anno "${year}" del cliente "${clientName}"? Questa operazione non può essere annullata.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina definitivamente!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const startOfYear = new Date(`${year}-01-01T00:00:00`);
+            const endOfYear = new Date(`${year}-12-31T23:59:59`);
+
+            const query = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('clientName', '==', clientName)
+                .where('deletedAt', '>=', firebase.firestore.Timestamp.fromDate(startOfYear))
+                .where('deletedAt', '<=', firebase.firestore.Timestamp.fromDate(endOfYear))
+                .where('isDeleted', '==', true);
+
+            deleteTimersPermanentlyInBatches(query,
+                () => {
+                    yearElement.remove();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Anno Eliminato',
+                        text: `Tutti i timer per l'anno "${year}" sono stati eliminati definitivamente.`,
+                        confirmButtonText: 'OK'
+                    });
+                },
+                (error) => {
+                    console.error('Errore durante l\'eliminazione definitiva dei timer dell\'anno:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante l\'eliminazione definitiva dei timer.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            );
+        }
+    });
+}
+
+// Funzione per eliminare definitivamente tutti i timer di un mese specifico dal cestino
+function permanentlyDeleteMonthTimers(clientName, year, month, monthElement) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: `Vuoi eliminare definitivamente tutti i timer per "${getMonthName(parseInt(month))} ${year}" del cliente "${clientName}"? Questa operazione non può essere annullata.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina definitivamente!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const startOfMonth = new Date(`${year}-${month}-01T00:00:00`);
+            const endOfMonth = new Date(year, parseInt(month), 0, 23, 59, 59); // Giorno 0 del mese successivo è l'ultimo giorno del mese corrente
+
+            const query = db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('clientName', '==', clientName)
+                .where('deletedAt', '>=', firebase.firestore.Timestamp.fromDate(startOfMonth))
+                .where('deletedAt', '<=', firebase.firestore.Timestamp.fromDate(endOfMonth))
+                .where('isDeleted', '==', true);
+
+            deleteTimersPermanentlyInBatches(query,
+                () => {
+                    monthElement.remove();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Mese Eliminato',
+                        text: `Tutti i timer per "${getMonthName(parseInt(month))} ${year}" sono stati eliminati definitivamente.`,
+                        confirmButtonText: 'OK'
+                    });
+                },
+                (error) => {
+                    console.error('Errore durante l\'eliminazione definitiva dei timer del mese:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante l\'eliminazione definitiva dei timer.',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            );
+        }
+    });
+}
+
+// Funzione per eliminare definitivamente i timer in batch (massimo 500 operazioni per batch)
+function deleteTimersPermanentlyInBatches(query, onComplete, onError) {
+    query.limit(500).get()
+        .then(snapshot => {
+            if (snapshot.empty) {
+                // Nessun documento da eliminare
+                onComplete();
+                return;
+            }
+
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            batch.commit().then(() => {
+                // Richiama la funzione ricorsivamente finché ci sono documenti
+                deleteTimersPermanentlyInBatches(query, onComplete, onError);
+            });
+        })
+        .catch(error => {
+            onError(error);
+        });
+}
