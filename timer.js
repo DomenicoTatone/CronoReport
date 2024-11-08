@@ -827,6 +827,3 @@ function formatDuration(seconds) {
     const secs = Math.floor(seconds % 60);
     return `${hrs.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
 }
-
-// Avvia l'inizializzazione degli eventi quando il DOM è pronto
-document.addEventListener('DOMContentLoaded', initializeTimerEvents);

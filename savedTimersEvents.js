@@ -2,14 +2,14 @@
 
 // Funzione per inizializzare la sezione Timer Salvati
 function initializeSavedTimersEvents() {
-    const savedTimersList = document.getElementById('saved-timers-list');
+    const savedTimersList = document.getElementById('savedTimersAccordion');
     const filterTimersBtn = document.getElementById('filter-timers-btn');
     const unmarkActionSelect = document.getElementById('unmark-action-select');
     const applyActionBtn = document.getElementById('apply-action-btn');
     const undoActionBtn = document.getElementById('undo-action-btn');
 
     if (!savedTimersList) {
-        console.error("Elemento 'saved-timers-list' non trovato nel DOM.");
+        console.error("Elemento 'savedTimersAccordion' non trovato nel DOM.");
         return;
     }
 

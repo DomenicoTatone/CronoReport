@@ -62,7 +62,7 @@ const savedTimersTemplate = `
     </div>
 
     <!-- Lista Timer Salvati -->
-    <div id="saved-timers-list" class="table-responsive">
+    <div id="savedTimersAccordion" class="accordion">
         <!-- Timer salvati saranno inseriti qui -->
     </div>
 </div>
