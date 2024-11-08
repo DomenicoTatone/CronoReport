@@ -58,6 +58,12 @@ const dashboardTemplate = `
 </div>
 `;
 
+// Variabili per mantenere i riferimenti ai grafici
+let workedTimeChartInstance = null;
+let earningsChartInstance = null;
+let worktypeDistributionChartInstance = null;
+let clientWorkedTimeChartInstance = null;
+
 /**
  * Funzione per inizializzare gli eventi della Dashboard
  */
@@ -66,8 +72,10 @@ function initializeDashboardEvents() {
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
-    // Chiama le funzioni per caricare i dati e generare i grafici
-    loadDashboardData();
+    // Assicura che il DOM sia aggiornato prima di chiamare le funzioni
+    setTimeout(() => {
+        loadDashboardData();
+    }, 0);
 }
 
 /**
@@ -97,53 +105,21 @@ function loadDashboardData() {
 }
 
 /**
- * Funzione per preparare il grafico del tempo lavorato per cliente
- */
-function prepareClientWorkedTimeChart(timeLogs) {
-    const workedTimePerClient = {};
-
-    timeLogs.forEach(log => {
-        const clientName = log.clientName || 'Sconosciuto';
-        const durationInHours = log.duration / 3600;
-
-        if (workedTimePerClient[clientName]) {
-            workedTimePerClient[clientName] += durationInHours;
-        } else {
-            workedTimePerClient[clientName] = durationInHours;
-        }
-    });
-
-    // Prepara i dati per il grafico
-    const labels = Object.keys(workedTimePerClient);
-    const data = labels.map(label => workedTimePerClient[label]);
-
-    // Crea il grafico
-    const ctx = document.getElementById('clientWorkedTimeChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Ore Lavorate per Cliente',
-                data: data,
-                backgroundColor: 'rgba(0, 123, 255, 0.6)',
-                borderColor: 'rgba(0, 123, 255, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                x: { title: { display: true, text: 'Cliente' } },
-                y: { title: { display: true, text: 'Ore' }, beginAtZero: true }
-            }
-        }
-    });
-}
-
-/**
  * Funzione per preparare il grafico del tempo lavorato
  */
 function prepareWorkedTimeChart(timeLogs) {
+    const canvasElement = document.getElementById('workedTimeChart');
+    if (!canvasElement) {
+        console.error('Elemento canvas "workedTimeChart" non trovato nel DOM.');
+        return;
+    }
+    const ctx = canvasElement.getContext('2d');
+
+    // Distruggi il grafico precedente se esiste
+    if (workedTimeChartInstance) {
+        workedTimeChartInstance.destroy();
+    }
+
     const workedTimePerDay = {};
 
     timeLogs.forEach(log => {
@@ -162,9 +138,8 @@ function prepareWorkedTimeChart(timeLogs) {
         .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
     const data = labels.map(label => workedTimePerDay[label]);
 
-    // Crea il grafico
-    const ctx = document.getElementById('workedTimeChart').getContext('2d');
-    new Chart(ctx, {
+    // Crea il grafico e salva l'istanza
+    workedTimeChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -189,6 +164,18 @@ function prepareWorkedTimeChart(timeLogs) {
  * Funzione per preparare il grafico dei guadagni totali
  */
 function prepareEarningsChart(timeLogs) {
+    const canvasElement = document.getElementById('earningsChart');
+    if (!canvasElement) {
+        console.error('Elemento canvas "earningsChart" non trovato nel DOM.');
+        return;
+    }
+    const ctx = canvasElement.getContext('2d');
+
+    // Distruggi il grafico precedente se esiste
+    if (earningsChartInstance) {
+        earningsChartInstance.destroy();
+    }
+
     const earningsPerDay = {};
 
     timeLogs.forEach(log => {
@@ -209,9 +196,8 @@ function prepareEarningsChart(timeLogs) {
         .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
     const data = labels.map(label => earningsPerDay[label]);
 
-    // Crea il grafico
-    const ctx = document.getElementById('earningsChart').getContext('2d');
-    new Chart(ctx, {
+    // Crea il grafico e salva l'istanza
+    earningsChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -237,7 +223,18 @@ function prepareEarningsChart(timeLogs) {
  * Funzione per preparare il grafico della distribuzione dei tipi di lavoro
  */
 function prepareWorktypeDistributionChart(timeLogs) {
-    // Raggruppa i dati per tipo di lavoro
+    const canvasElement = document.getElementById('worktypeDistributionChart');
+    if (!canvasElement) {
+        console.error('Elemento canvas "worktypeDistributionChart" non trovato nel DOM.');
+        return;
+    }
+    const ctx = canvasElement.getContext('2d');
+
+    // Distruggi il grafico precedente se esiste
+    if (worktypeDistributionChartInstance) {
+        worktypeDistributionChartInstance.destroy();
+    }
+
     const worktypeDistribution = {};
 
     timeLogs.forEach(log => {
@@ -255,9 +252,8 @@ function prepareWorktypeDistributionChart(timeLogs) {
     const labels = Object.keys(worktypeDistribution);
     const data = labels.map(label => worktypeDistribution[label]);
 
-    // Crea il grafico
-    const ctx = document.getElementById('worktypeDistributionChart').getContext('2d');
-    new Chart(ctx, {
+    // Crea il grafico e salva l'istanza
+    worktypeDistributionChartInstance = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: labels,
@@ -283,6 +279,61 @@ function prepareWorktypeDistributionChart(timeLogs) {
         },
         options: {
             responsive: true
+        }
+    });
+}
+
+/**
+ * Funzione per preparare il grafico del tempo lavorato per cliente
+ */
+function prepareClientWorkedTimeChart(timeLogs) {
+    const canvasElement = document.getElementById('clientWorkedTimeChart');
+    if (!canvasElement) {
+        console.error('Elemento canvas "clientWorkedTimeChart" non trovato nel DOM.');
+        return;
+    }
+    const ctx = canvasElement.getContext('2d');
+
+    // Distruggi il grafico precedente se esiste
+    if (clientWorkedTimeChartInstance) {
+        clientWorkedTimeChartInstance.destroy();
+    }
+
+    const workedTimePerClient = {};
+
+    timeLogs.forEach(log => {
+        const clientName = log.clientName || 'Sconosciuto';
+        const durationInHours = log.duration / 3600;
+
+        if (workedTimePerClient[clientName]) {
+            workedTimePerClient[clientName] += durationInHours;
+        } else {
+            workedTimePerClient[clientName] = durationInHours;
+        }
+    });
+
+    // Prepara i dati per il grafico
+    const labels = Object.keys(workedTimePerClient);
+    const data = labels.map(label => workedTimePerClient[label]);
+
+    // Crea il grafico e salva l'istanza
+    clientWorkedTimeChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ore Lavorate per Cliente',
+                data: data,
+                backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Cliente' } },
+                y: { title: { display: true, text: 'Ore' }, beginAtZero: true }
+            }
         }
     });
 }
