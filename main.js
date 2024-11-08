@@ -28,7 +28,9 @@ auth.onAuthStateChanged(async (user) => {
 // Template per la sezione Gestione Dati
 const dataManagementTemplate = `
 <div id="data-management" class="container mt-5">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Gestione Dati</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-database mr-2"></i>Gestione Dati
+    </h2>
 
     <div class="row">
         <!-- Aggiungi Cliente -->
@@ -157,6 +159,11 @@ function loadSection(section) {
         default:
             contentSection.innerHTML = '<p>Sezione non trovata.</p>';
     }
+
+    // **Inizializza i tooltip di Bootstrap qui**
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
 }
 
 /**

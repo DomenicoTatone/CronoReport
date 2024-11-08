@@ -382,7 +382,7 @@ function loadSavedTimers(filters = {}) {
                 });
             }
         })
-        
+
         .catch(error => {
             console.error('Errore nel caricamento dei timer salvati:', error);
         });
@@ -487,18 +487,21 @@ function loadRecycleBin() {
 
                     // Creazione della tabella per i timer di questo mese
                     const table = document.createElement('table');
-                    table.classList.add('table', 'table-striped', 'table-bordered');
+                    table.classList.add('table', 'table-striped', 'table-bordered', 'table-hover', 'mb-0');
 
                     // Creazione dell'header della tabella
                     const thead = document.createElement('thead');
+                    thead.classList.add('thead-light');
                     const headerRow = document.createElement('tr');
 
                     const headers = [
+                        'Seleziona',
                         'Cliente - Sito',
                         'Tipo di Lavoro',
                         'Durata',
                         'Orari',
                         'Link',
+                        'Stato',
                         'Azione'
                     ];
 
@@ -506,6 +509,7 @@ function loadRecycleBin() {
                         const th = document.createElement('th');
                         th.textContent = headerText;
                         th.scope = 'col';
+                        th.classList.add('align-middle', 'text-center');
                         headerRow.appendChild(th);
                     });
 

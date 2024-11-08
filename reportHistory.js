@@ -3,7 +3,9 @@
 // Template per la sezione Storico Report
 const reportHistoryTemplate = `
 <div id="report-history-section" class="container mt-5">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Storico Report</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-history mr-2"></i>Storico Report
+    </h2>
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-file-alt mr-2"></i>Lista Report</h5>

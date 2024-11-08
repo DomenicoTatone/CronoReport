@@ -16,7 +16,9 @@ let activeTimers = [];
 // Template per la sezione Timer
 const timerTemplate = `
 <div id="timer-section" class="container mt-5">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Timer di Lavoro</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-clock mr-2"></i>Timer di Lavoro
+    </h2>
 
     <div class="row">
         <!-- Selezione Cliente e Dettagli -->
@@ -85,7 +87,9 @@ const timerTemplate = `
 
     <!-- Sezione Timer Attivi -->
     <div id="active-timers" class="mt-5">
-        <h2 class="mb-4 text-center text-uppercase font-weight-bold">Timer Attivi</h2>
+    <h2 class="mb-4 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-play-circle mr-2"></i>Timer Attivi
+    </h2>
         <div id="timer-cards" class="row">
             <!-- Le card dei timer attivi saranno aggiunte dinamicamente -->
         </div>

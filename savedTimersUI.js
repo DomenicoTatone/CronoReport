@@ -3,7 +3,9 @@
 // Template per la sezione Timer Salvati
 const savedTimersTemplate = `
 <div id="saved-timers-section" class="container mt-5">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Timer Salvati</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-stopwatch mr-2"></i>Timer Salvati
+    </h2>
 
     <!-- Sezione Filtri -->
     <div class="card mb-4 shadow-sm">
@@ -27,7 +29,9 @@ const savedTimersTemplate = `
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <button id="filter-timers-btn" type="button" class="btn btn-primary btn-block mt-2"><i class="fas fa-search mr-2"></i>Filtra Timer</button>
+                    <button id="filter-timers-btn" type="button" class="btn btn-primary btn-block mt-2">
+                        <i class="fas fa-search mr-2"></i>Filtra Timer
+                    </button>
                 </div>
             </form>
         </div>
@@ -50,7 +54,9 @@ const savedTimersTemplate = `
                     </select>
                 </div>
                 <div class="col-md-6 d-flex align-items-end">
-                    <button id="apply-action-btn" class="btn btn-success btn-block mt-2"><i class="fas fa-check mr-2"></i>Applica</button>
+                    <button id="apply-action-btn" class="btn btn-success btn-block mt-2">
+                        <i class="fas fa-check mr-2"></i>Applica
+                    </button>
                 </div>
             </div>
         </div>
@@ -58,7 +64,9 @@ const savedTimersTemplate = `
 
     <!-- Pulsante Annulla Ultima Operazione -->
     <div class="text-right mb-4">
-        <button id="undo-action-btn" class="btn btn-outline-secondary"><i class="fas fa-undo mr-2"></i>Annulla Ultima Operazione</button>
+        <button id="undo-action-btn" class="btn btn-outline-secondary">
+            <i class="fas fa-undo mr-2"></i>Annulla Ultima Operazione
+        </button>
     </div>
 
     <!-- Lista Timer Salvati -->
@@ -69,7 +77,9 @@ const savedTimersTemplate = `
 
 <!-- Sezione Cestino -->
 <div id="recycle-bin-section" class="container mt-5" style="display: none;">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Cestino</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-trash-alt mr-2"></i>Cestino
+    </h2>
     <!-- Lista Timer nel Cestino -->
     <div id="recycle-bin-list" class="table-responsive">
         <!-- Timer nel cestino saranno inseriti qui -->
@@ -91,10 +101,7 @@ function createTimerRow(timerId, logData) {
 
     // Colonna per la checkbox
     const checkboxCell = document.createElement('td');
-    checkboxCell.classList.add('text-center', 'align-middle'); // Allinea al centro verticalmente e orizzontalmente
-
-    const checkboxWrapper = document.createElement('div');
-    checkboxWrapper.classList.add('form-check', 'd-flex', 'justify-content-center', 'align-items-center', 'mb-0');
+    checkboxCell.classList.add('text-center', 'align-middle');
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
@@ -102,43 +109,39 @@ function createTimerRow(timerId, logData) {
     checkbox.value = timerId;
     checkbox.id = 'checkbox-' + timerId;
 
-    const checkboxLabel = document.createElement('label');
-    checkboxLabel.classList.add('form-check-label', 'sr-only'); // Nasconde il label visivamente ma lo rende accessibile
-    checkboxLabel.setAttribute('for', 'checkbox-' + timerId);
-    checkboxLabel.textContent = 'Seleziona Timer';
-
-    checkboxWrapper.appendChild(checkbox);
-    checkboxWrapper.appendChild(checkboxLabel);
-    checkboxCell.appendChild(checkboxWrapper);
+    checkboxCell.appendChild(checkbox);
     row.appendChild(checkboxCell);
 
-    // Colonna per Cliente e Sito
+    // Colonna per Cliente e Sito con icona
     const clientCell = document.createElement('td');
-    clientCell.textContent = `${logData.clientName} - ${logData.siteName}`;
+    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.siteName}`;
     row.appendChild(clientCell);
 
-    // Colonna per Tipo di Lavoro
+    // Colonna per Tipo di Lavoro con icona
     const worktypeCell = document.createElement('td');
-    worktypeCell.textContent = logData.worktypeName || 'N/A';
+    worktypeCell.innerHTML = `<i class="fas fa-briefcase mr-2"></i>${logData.worktypeName || 'N/A'}`;
     row.appendChild(worktypeCell);
 
-    // Colonna per Durata
+    // Colonna per Durata con icona
     const durationCell = document.createElement('td');
-    durationCell.textContent = formatDuration(logData.duration);
+    durationCell.innerHTML = `<i class="fas fa-clock mr-2"></i>${formatDuration(logData.duration)}`;
     row.appendChild(durationCell);
 
-    // Colonna per Orario di Inizio e Fine
+    // Colonna per Orario di Inizio e Fine con formattazione
     const timeCell = document.createElement('td');
-    timeCell.innerHTML = `<strong>Inizio:</strong> ${new Date(logData.startTime.seconds * 1000).toLocaleString()}<br><strong>Fine:</strong> ${new Date(logData.endTime.seconds * 1000).toLocaleString()}`;
+    timeCell.innerHTML = `
+        <i class="fas fa-play mr-1 text-success"></i> ${formatDateTime(logData.startTime)}<br>
+        <i class="fas fa-stop mr-1 text-danger"></i> ${formatDateTime(logData.endTime)}
+    `;
     row.appendChild(timeCell);
 
-    // Colonna per il Link
+    // Colonna per il Link con icona
     const linkCell = document.createElement('td');
     if (logData.link) {
         const linkAnchor = document.createElement('a');
         linkAnchor.href = logData.link;
         linkAnchor.target = '_blank';
-        linkAnchor.textContent = 'Apri Link';
+        linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>Apri Link';
         linkCell.appendChild(linkAnchor);
     } else {
         linkCell.textContent = 'N/A';
@@ -147,17 +150,30 @@ function createTimerRow(timerId, logData) {
 
     // Colonna per l'Icona di Contrassegno
     const statusCell = document.createElement('td');
+    statusCell.classList.add('text-center', 'align-middle');
     if (logData.isReported) {
         const checkmarkIcon = document.createElement('i');
         checkmarkIcon.classList.add('fas', 'fa-check-circle', 'text-success');
+        checkmarkIcon.setAttribute('title', 'Reportato');
+        checkmarkIcon.setAttribute('data-toggle', 'tooltip');
         statusCell.appendChild(checkmarkIcon);
+    } else {
+        const pendingIcon = document.createElement('i');
+        pendingIcon.classList.add('fas', 'fa-hourglass-half', 'text-warning');
+        pendingIcon.setAttribute('title', 'Non Reportato');
+        pendingIcon.setAttribute('data-toggle', 'tooltip');
+        statusCell.appendChild(pendingIcon);
     }
     row.appendChild(statusCell);
 
-    // Colonna per l'Azione Elimina
+    // Colonna per l'Azione Elimina con icona
     const actionCell = document.createElement('td');
+    actionCell.classList.add('text-center', 'align-middle');
+
     const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
+    deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+    deleteBtn.setAttribute('title', 'Elimina Timer'); // Testo del tooltip
+    deleteBtn.setAttribute('data-toggle', 'tooltip'); // Attributo per il tooltip
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', () => {
         deleteTimer(timerId, row);
@@ -168,39 +184,41 @@ function createTimerRow(timerId, logData) {
     return row;
 }
 
-
 // Funzione per creare l'elemento HTML di un timer nel cestino come riga di tabella
 function createRecycleBinRow(timerId, logData) {
     // Crea l'elemento riga (tr)
     const row = document.createElement('tr');
 
-    // Colonna per Cliente e Sito
+    // Colonna per Cliente e Sito con icona
     const clientCell = document.createElement('td');
-    clientCell.textContent = `${logData.clientName} - ${logData.siteName}`;
+    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.siteName}`;
     row.appendChild(clientCell);
 
-    // Colonna per Tipo di Lavoro
+    // Colonna per Tipo di Lavoro con icona
     const worktypeCell = document.createElement('td');
-    worktypeCell.textContent = logData.worktypeName || 'N/A';
+    worktypeCell.innerHTML = `<i class="fas fa-briefcase mr-2"></i>${logData.worktypeName || 'N/A'}`;
     row.appendChild(worktypeCell);
 
-    // Colonna per Durata
+    // Colonna per Durata con icona
     const durationCell = document.createElement('td');
-    durationCell.textContent = formatDuration(logData.duration);
+    durationCell.innerHTML = `<i class="fas fa-clock mr-2"></i>${formatDuration(logData.duration)}`;
     row.appendChild(durationCell);
 
-    // Colonna per Orario di Inizio e Fine
+    // Colonna per Orario di Inizio e Fine con formattazione
     const timeCell = document.createElement('td');
-    timeCell.innerHTML = `<strong>Inizio:</strong> ${new Date(logData.startTime.seconds * 1000).toLocaleString()}<br><strong>Fine:</strong> ${new Date(logData.endTime.seconds * 1000).toLocaleString()}`;
+    timeCell.innerHTML = `
+        <i class="fas fa-play mr-1 text-success"></i> ${formatDateTime(logData.startTime)}<br>
+        <i class="fas fa-stop mr-1 text-danger"></i> ${formatDateTime(logData.endTime)}
+    `;
     row.appendChild(timeCell);
 
-    // Colonna per il Link
+    // Colonna per il Link con icona
     const linkCell = document.createElement('td');
     if (logData.link) {
         const linkAnchor = document.createElement('a');
         linkAnchor.href = logData.link;
         linkAnchor.target = '_blank';
-        linkAnchor.textContent = 'Apri Link';
+        linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>Apri Link';
         linkCell.appendChild(linkAnchor);
     } else {
         linkCell.textContent = 'N/A';
@@ -209,16 +227,19 @@ function createRecycleBinRow(timerId, logData) {
 
     // Colonna per le Azioni (Ripristina ed Elimina Definitivamente)
     const actionCell = document.createElement('td');
+    actionCell.classList.add('text-center', 'align-middle');
 
     const restoreBtn = document.createElement('button');
     restoreBtn.classList.add('btn', 'btn-success', 'btn-sm', 'mr-2');
+    restoreBtn.setAttribute('title', 'Ripristina Timer');
     restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
     restoreBtn.addEventListener('click', () => {
         restoreTimer(timerId, row);
     });
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
+    deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+    deleteBtn.setAttribute('title', 'Elimina Definitivamente');
     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
     deleteBtn.addEventListener('click', () => {
         permanentlyDeleteTimer(timerId, row);
@@ -251,4 +272,10 @@ function formatDuration(seconds) {
     const secsDisplay = secs > 0 ? (secs < 10 ? '0' + secs : secs) + 's' : '00s';
 
     return hrsDisplay + minsDisplay + secsDisplay;
+}
+
+// Funzione per formattare la data e l'ora
+function formatDateTime(timestamp) {
+    const date = new Date(timestamp.seconds * 1000);
+    return date.toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
 }

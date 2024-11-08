@@ -7,7 +7,9 @@ let companyLogoBase64 = ''; // Variabile per memorizzare il logo in base64
 // Template per la sezione Report con layout migliorato
 const reportTemplate = `
 <div id="report-section" class="container mt-5">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Genera Report</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-file-alt mr-2"></i>Genera Report
+    </h2>
     <form id="report-form">
         <div class="card mb-4 shadow-sm">
             <div class="card-header bg-primary text-white">

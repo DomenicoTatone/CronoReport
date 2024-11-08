@@ -3,7 +3,9 @@
 // Template per la sezione Dashboard
 const dashboardTemplate = `
 <div id="dashboard-section" class="container mt-5">
-    <h2 class="mb-5 text-center text-uppercase font-weight-bold">Dashboard Analitica</h2>
+    <h2 class="mb-5 text-center text-uppercase font-weight-bold">
+        <i class="fas fa-chart-line mr-2"></i>Dashboard Analitica
+    </h2>
     <div class="row">
         <div class="col-md-6">
             <!-- Carta per il tempo lavorato -->
