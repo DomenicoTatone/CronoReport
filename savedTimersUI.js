@@ -2,7 +2,7 @@
 
 // Template per la sezione Timer Salvati
 const savedTimersTemplate = `
-<div id="saved-timers-section" class="container mt-5">
+<div id="saved-timers-section" class="container mt-5 custom-container">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-stopwatch mr-2"></i>Timer Salvati
     </h2>

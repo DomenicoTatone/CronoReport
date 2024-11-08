@@ -79,3 +79,12 @@ body {
     max-height: 300px; /* Imposta l'altezza massima del grafico */
     margin: 0 auto; /* Centra il grafico */
 }
+
+.custom-container {
+    max-width: 1200px;
+    /* Imposta la larghezza massima desiderata */
+    width: 100%;
+    /* Assicura che il container sia fluido */
+    margin: 0 auto;
+    /* Centra il container */
+}

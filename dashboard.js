@@ -2,7 +2,7 @@
 
 // Template per la sezione Dashboard
 const dashboardTemplate = `
-<div id="dashboard-section" class="container mt-5">
+<div id="dashboard-section" class="container mt-5 custom-container">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-chart-line mr-2"></i>Dashboard Analitica
     </h2>

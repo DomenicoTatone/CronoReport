@@ -2,7 +2,7 @@
 
 // Template per la sezione Storico Report
 const reportHistoryTemplate = `
-<div id="report-history-section" class="container mt-5">
+<div id="report-history-section" class="container mt-5 custom-container">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-history mr-2"></i>Storico Report
     </h2>

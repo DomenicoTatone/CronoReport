@@ -27,7 +27,7 @@ auth.onAuthStateChanged(async (user) => {
 
 // Template per la sezione Gestione Dati
 const dataManagementTemplate = `
-<div id="data-management" class="container mt-5">
+<div id="data-management" class="container mt-5 custom-container">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-database mr-2"></i>Gestione Dati
     </h2>

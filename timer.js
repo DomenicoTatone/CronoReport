@@ -15,7 +15,7 @@ let activeTimers = [];
 
 // Template per la sezione Timer
 const timerTemplate = `
-<div id="timer-section" class="container mt-5">
+<div id="timer-section" class="container mt-5 custom-container">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-clock mr-2"></i>Timer di Lavoro
     </h2>
