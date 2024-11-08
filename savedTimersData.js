@@ -103,7 +103,7 @@ function loadSavedTimers(filters = {}) {
                 // Pulsanti per Espandere/Comprimi Tutto per il Cliente
                 const expandAllBtn = document.createElement('button');
                 expandAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                expandAllBtn.textContent = 'Espandi Tutto';
+                expandAllBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
                 expandAllBtn.addEventListener('click', () => {
                     const clientCollapseElement = $(`#collapse-${clientId}`);
                     if (clientCollapseElement.hasClass('show')) {
@@ -120,15 +120,24 @@ function loadSavedTimers(filters = {}) {
 
                 const collapseAllBtn = document.createElement('button');
                 collapseAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                collapseAllBtn.textContent = 'Comprimi Tutto';
+                collapseAllBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
                 collapseAllBtn.addEventListener('click', () => {
                     $(`#collapse-${clientId} .collapse`).collapse('hide');
                     $(`#collapse-${clientId}`).collapse('hide');
                 });
 
+                // Pulsante per Eliminare il Cliente
+                const deleteClientBtn = document.createElement('button');
+                deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Cliente';
+                deleteClientBtn.addEventListener('click', () => {
+                    deleteClientTimers(clientName, clientSection);
+                });
+
                 const clientHeaderActions = document.createElement('div');
                 clientHeaderActions.appendChild(expandAllBtn);
                 clientHeaderActions.appendChild(collapseAllBtn);
+                clientHeaderActions.appendChild(deleteClientBtn);
 
                 const clientHeaderContainer = document.createElement('div');
                 clientHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
@@ -142,7 +151,6 @@ function loadSavedTimers(filters = {}) {
                 clientCollapse.id = `collapse-${clientId}`;
                 clientCollapse.classList.add('collapse');
                 clientCollapse.setAttribute('aria-labelledby', `heading-${clientId}`);
-                // Rimosso data-parent
 
                 const clientBody = document.createElement('div');
                 clientBody.classList.add('card-body');
@@ -177,7 +185,7 @@ function loadSavedTimers(filters = {}) {
                     // Pulsanti per Espandere/Comprimi Tutto per l'Anno
                     const expandYearBtn = document.createElement('button');
                     expandYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                    expandYearBtn.textContent = 'Espandi Tutto';
+                    expandYearBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
                     expandYearBtn.addEventListener('click', () => {
                         const yearCollapseElement = $(`#collapse-${yearId}`);
                         if (yearCollapseElement.hasClass('show')) {
@@ -194,15 +202,24 @@ function loadSavedTimers(filters = {}) {
 
                     const collapseYearBtn = document.createElement('button');
                     collapseYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                    collapseYearBtn.textContent = 'Comprimi Tutto';
+                    collapseYearBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
                     collapseYearBtn.addEventListener('click', () => {
                         $(`#collapse-${yearId} .collapse`).collapse('hide');
                         $(`#collapse-${yearId}`).collapse('hide');
                     });
 
+                    // Pulsante per Eliminare l'Anno
+                    const deleteYearBtn = document.createElement('button');
+                    deleteYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                    deleteYearBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Anno';
+                    deleteYearBtn.addEventListener('click', () => {
+                        deleteYearTimers(clientName, year, yearSection);
+                    });
+
                     const yearHeaderActions = document.createElement('div');
                     yearHeaderActions.appendChild(expandYearBtn);
                     yearHeaderActions.appendChild(collapseYearBtn);
+                    yearHeaderActions.appendChild(deleteYearBtn);
 
                     const yearHeaderContainer = document.createElement('div');
                     yearHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
@@ -216,7 +233,6 @@ function loadSavedTimers(filters = {}) {
                     yearCollapse.id = `collapse-${yearId}`;
                     yearCollapse.classList.add('collapse');
                     yearCollapse.setAttribute('aria-labelledby', `heading-${yearId}`);
-                    // Rimosso data-parent
 
                     const yearBody = document.createElement('div');
                     yearBody.classList.add('card-body');
@@ -252,14 +268,29 @@ function loadSavedTimers(filters = {}) {
 
                         monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
 
-                        monthHeader.appendChild(monthButton);
+                        // Pulsante per Eliminare il Mese
+                        const deleteMonthBtn = document.createElement('button');
+                        deleteMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                        deleteMonthBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Mese';
+                        deleteMonthBtn.addEventListener('click', () => {
+                            deleteMonthTimers(clientName, year, month, monthSection);
+                        });
+
+                        const monthHeaderActions = document.createElement('div');
+                        monthHeaderActions.appendChild(deleteMonthBtn);
+
+                        const monthHeaderContainer = document.createElement('div');
+                        monthHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                        monthHeaderContainer.appendChild(monthButton);
+                        monthHeaderContainer.appendChild(monthHeaderActions);
+
+                        monthHeader.appendChild(monthHeaderContainer);
 
                         // Div per il collapse del Mese
                         const monthCollapse = document.createElement('div');
                         monthCollapse.id = `collapse-${monthId}`;
                         monthCollapse.classList.add('collapse');
                         monthCollapse.setAttribute('aria-labelledby', `heading-${monthId}`);
-                        // Rimosso data-parent
 
                         const monthBody = document.createElement('div');
                         monthBody.classList.add('card-body');
@@ -382,7 +413,6 @@ function loadSavedTimers(filters = {}) {
                 });
             }
         })
-
         .catch(error => {
             console.error('Errore nel caricamento dei timer salvati:', error);
         });
@@ -411,7 +441,6 @@ function loadClientsForFilter() {
         });
 }
 
-// Funzione per caricare i timer nel cestino
 function loadRecycleBin() {
     const recycleBinList = document.getElementById('recycle-bin-list');
     recycleBinList.innerHTML = ''; // Svuota la lista
@@ -429,113 +458,267 @@ function loadRecycleBin() {
                 return;
             }
 
-            // Organizzazione dei timer per cliente e mese
+            // Organizzazione dei timer per cliente, anno e mese
             const timersByClient = {};
 
             snapshot.forEach(doc => {
                 const logData = doc.data();
                 const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-                // Formatta la data in "YYYY-MM"
-                const deletedAt = logData.deletedAt.toDate();
-                const monthKey = deletedAt.getFullYear() + '-' + String(deletedAt.getMonth() + 1).padStart(2, '0');
+                // Ottieni la data di eliminazione o di inizio se deletedAt non è disponibile
+                const deletedAt = logData.deletedAt ? logData.deletedAt.toDate() : logData.startTime.toDate();
+
+                // Ottieni l'anno e il mese
+                const year = deletedAt.getFullYear();
+                const month = String(deletedAt.getMonth() + 1).padStart(2, '0'); // Mese con zero iniziale
 
                 if (!timersByClient[clientName]) {
                     timersByClient[clientName] = {};
                 }
 
-                if (!timersByClient[clientName][monthKey]) {
-                    timersByClient[clientName][monthKey] = [];
+                if (!timersByClient[clientName][year]) {
+                    timersByClient[clientName][year] = {};
                 }
 
-                timersByClient[clientName][monthKey].push({
+                if (!timersByClient[clientName][year][month]) {
+                    timersByClient[clientName][year][month] = [];
+                }
+
+                timersByClient[clientName][year][month].push({
                     id: doc.id,
                     data: logData
                 });
             });
 
             // Generazione dell'HTML per visualizzare i timer raggruppati
+            let clientIndex = 0;
             for (const clientName in timersByClient) {
-                // Sezione Cliente
+                clientIndex++;
+                const clientId = `recycle-client-${clientIndex}`;
                 const clientSection = document.createElement('div');
-                clientSection.classList.add('client-section', 'mb-4');
+                clientSection.classList.add('card');
 
-                const clientHeader = document.createElement('h3');
-                clientHeader.textContent = clientName;
-                clientHeader.classList.add('client-header', 'mb-3');
+                // Card Header per il Cliente
+                const clientHeader = document.createElement('div');
+                clientHeader.classList.add('card-header');
+                clientHeader.id = `recycle-heading-${clientId}`;
 
-                clientSection.appendChild(clientHeader);
+                // Pulsante per espandere/comprimere il Cliente
+                const clientButton = document.createElement('button');
+                clientButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
+                clientButton.setAttribute('data-toggle', 'collapse');
+                clientButton.setAttribute('data-target', `#recycle-collapse-${clientId}`);
+                clientButton.setAttribute('aria-expanded', 'false');
+                clientButton.setAttribute('aria-controls', `recycle-collapse-${clientId}`);
+                clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
 
-                const months = timersByClient[clientName];
+                clientHeader.appendChild(clientButton);
 
-                // Ordina i mesi in ordine decrescente
-                const sortedMonths = Object.keys(months).sort((a, b) => b.localeCompare(a));
+                // Div per il collapse del Cliente
+                const clientCollapse = document.createElement('div');
+                clientCollapse.id = `recycle-collapse-${clientId}`;
+                clientCollapse.classList.add('collapse');
+                clientCollapse.setAttribute('aria-labelledby', `recycle-heading-${clientId}`);
 
-                sortedMonths.forEach(monthKey => {
-                    const monthSection = document.createElement('div');
-                    monthSection.classList.add('month-section', 'mb-3');
+                const clientBody = document.createElement('div');
+                clientBody.classList.add('card-body');
 
-                    // Formatta il mese in modo leggibile
-                    const [year, month] = monthKey.split('-');
-                    const monthName = getMonthName(parseInt(month));
+                const years = timersByClient[clientName];
 
-                    const monthHeader = document.createElement('h5');
-                    monthHeader.textContent = `${monthName} ${year}`;
-                    monthHeader.classList.add('month-header', 'mb-2');
+                // Ordina gli anni in ordine decrescente
+                const sortedYears = Object.keys(years).sort((a, b) => b - a);
 
-                    monthSection.appendChild(monthHeader);
+                let yearIndex = 0;
+                sortedYears.forEach(year => {
+                    yearIndex++;
+                    const yearId = `${clientId}-year-${yearIndex}`;
 
-                    // Creazione della tabella per i timer di questo mese
-                    const table = document.createElement('table');
-                    table.classList.add('table', 'table-striped', 'table-bordered', 'table-hover', 'mb-0');
+                    // Sezione per l'Anno
+                    const yearSection = document.createElement('div');
+                    yearSection.classList.add('card');
 
-                    // Creazione dell'header della tabella
-                    const thead = document.createElement('thead');
-                    thead.classList.add('thead-light');
-                    const headerRow = document.createElement('tr');
+                    // Header per l'Anno
+                    const yearHeader = document.createElement('div');
+                    yearHeader.classList.add('card-header');
+                    yearHeader.id = `recycle-heading-${yearId}`;
 
-                    const headers = [
-                        'Seleziona',
-                        'Cliente - Sito',
-                        'Tipo di Lavoro',
-                        'Durata',
-                        'Orari',
-                        'Link',
-                        'Stato',
-                        'Azione'
-                    ];
+                    const yearButton = document.createElement('button');
+                    yearButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
+                    yearButton.setAttribute('data-toggle', 'collapse');
+                    yearButton.setAttribute('data-target', `#recycle-collapse-${yearId}`);
+                    yearButton.setAttribute('aria-expanded', 'false');
+                    yearButton.setAttribute('aria-controls', `recycle-collapse-${yearId}`);
+                    yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
 
-                    headers.forEach(headerText => {
-                        const th = document.createElement('th');
-                        th.textContent = headerText;
-                        th.scope = 'col';
-                        th.classList.add('align-middle', 'text-center');
-                        headerRow.appendChild(th);
+                    yearHeader.appendChild(yearButton);
+
+                    // Div per il collapse dell'Anno
+                    const yearCollapse = document.createElement('div');
+                    yearCollapse.id = `recycle-collapse-${yearId}`;
+                    yearCollapse.classList.add('collapse');
+                    yearCollapse.setAttribute('aria-labelledby', `recycle-heading-${yearId}`);
+
+                    const yearBody = document.createElement('div');
+                    yearBody.classList.add('card-body');
+
+                    const months = years[year];
+
+                    // Ordina i mesi in ordine decrescente
+                    const sortedMonths = Object.keys(months).sort((a, b) => b - a);
+
+                    let monthIndex = 0;
+                    sortedMonths.forEach(month => {
+                        monthIndex++;
+                        const monthId = `${yearId}-month-${monthIndex}`;
+
+                        // Sezione per il Mese
+                        const monthSection = document.createElement('div');
+                        monthSection.classList.add('card');
+
+                        // Header per il Mese
+                        const monthHeader = document.createElement('div');
+                        monthHeader.classList.add('card-header');
+                        monthHeader.id = `recycle-heading-${monthId}`;
+
+                        const monthButton = document.createElement('button');
+                        monthButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
+                        monthButton.setAttribute('data-toggle', 'collapse');
+                        monthButton.setAttribute('data-target', `#recycle-collapse-${monthId}`);
+                        monthButton.setAttribute('aria-expanded', 'false');
+                        monthButton.setAttribute('aria-controls', `recycle-collapse-${monthId}`);
+
+                        // Formatta il nome del mese
+                        const monthName = getMonthName(parseInt(month));
+
+                        monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
+
+                        monthHeader.appendChild(monthButton);
+
+                        // Div per il collapse del Mese
+                        const monthCollapse = document.createElement('div');
+                        monthCollapse.id = `recycle-collapse-${monthId}`;
+                        monthCollapse.classList.add('collapse');
+                        monthCollapse.setAttribute('aria-labelledby', `recycle-heading-${monthId}`);
+
+                        const monthBody = document.createElement('div');
+                        monthBody.classList.add('card-body');
+
+                        // Creazione della tabella per i timer di questo mese
+                        const table = document.createElement('table');
+                        table.classList.add('table', 'table-striped', 'table-bordered');
+
+                        // Creazione dell'header della tabella
+                        const thead = document.createElement('thead');
+                        const headerRow = document.createElement('tr');
+
+                        const headers = [
+                            'Seleziona',
+                            'Cliente - Sito',
+                            'Tipo di Lavoro',
+                            'Durata',
+                            'Orari',
+                            'Link',
+                            'Reportato',
+                            'Azione'
+                        ];
+
+                        headers.forEach(headerText => {
+                            const th = document.createElement('th');
+                            th.textContent = headerText;
+                            th.scope = 'col';
+                            headerRow.appendChild(th);
+                        });
+
+                        thead.appendChild(headerRow);
+                        table.appendChild(thead);
+
+                        // Corpo della tabella
+                        const tbody = document.createElement('tbody');
+
+                        const timers = months[month];
+
+                        timers.sort((a, b) => b.data.startTime.seconds - a.data.startTime.seconds);
+
+                        timers.forEach(timerObj => {
+                            const logData = timerObj.data;
+                            const timerRow = createTimerRow(timerObj.id, logData, true); // Passiamo true per indicare che siamo nel cestino
+                            tbody.appendChild(timerRow);
+                        });
+
+                        table.appendChild(tbody);
+
+                        // Aggiungi la tabella al body del mese
+                        monthBody.appendChild(table);
+                        monthCollapse.appendChild(monthBody);
+
+                        monthSection.appendChild(monthHeader);
+                        monthSection.appendChild(monthCollapse);
+
+                        // Aggiungi il mese al corpo dell'anno
+                        yearBody.appendChild(monthSection);
+
+                        // Inizializza la sezione collassabile del mese
+                        $(monthCollapse).collapse({
+                            toggle: false
+                        });
+
+                        // Eventi per cambiare l'icona al clic sul mese
+                        $(`#recycle-collapse-${monthId}`).on('show.bs.collapse', function () {
+                            monthButton.classList.remove('collapsed');
+                            monthButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${monthName}`;
+                        });
+                        $(`#recycle-collapse-${monthId}`).on('hide.bs.collapse', function () {
+                            monthButton.classList.add('collapsed');
+                            monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
+                        });
                     });
 
-                    thead.appendChild(headerRow);
-                    table.appendChild(thead);
+                    yearCollapse.appendChild(yearBody);
 
-                    // Corpo della tabella
-                    const tbody = document.createElement('tbody');
+                    yearSection.appendChild(yearHeader);
+                    yearSection.appendChild(yearCollapse);
 
-                    const timers = months[monthKey];
+                    // Aggiungi l'anno al corpo del cliente
+                    clientBody.appendChild(yearSection);
 
-                    timers.sort((a, b) => b.data.deletedAt.seconds - a.data.deletedAt.seconds);
-
-                    timers.forEach(timerObj => {
-                        const logData = timerObj.data;
-                        const timerRow = createRecycleBinRow(timerObj.id, logData);
-                        tbody.appendChild(timerRow);
+                    // Inizializza la sezione collassabile dell'anno
+                    $(yearCollapse).collapse({
+                        toggle: false
                     });
 
-                    table.appendChild(tbody);
-                    monthSection.appendChild(table);
-
-                    clientSection.appendChild(monthSection);
+                    // Eventi per cambiare l'icona al clic sull'anno
+                    $(`#recycle-collapse-${yearId}`).on('show.bs.collapse', function () {
+                        yearButton.classList.remove('collapsed');
+                        yearButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${year}`;
+                    });
+                    $(`#recycle-collapse-${yearId}`).on('hide.bs.collapse', function () {
+                        yearButton.classList.add('collapsed');
+                        yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
+                    });
                 });
 
+                clientCollapse.appendChild(clientBody);
+
+                clientSection.appendChild(clientHeader);
+                clientSection.appendChild(clientCollapse);
+
+                // Aggiungi il cliente alla lista principale
                 recycleBinList.appendChild(clientSection);
+
+                // Inizializza la sezione collassabile del cliente
+                $(clientCollapse).collapse({
+                    toggle: false
+                });
+
+                // Eventi per cambiare l'icona al clic sul cliente
+                $(`#recycle-collapse-${clientId}`).on('show.bs.collapse', function () {
+                    clientButton.classList.remove('collapsed');
+                    clientButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${clientName}`;
+                });
+                $(`#recycle-collapse-${clientId}`).on('hide.bs.collapse', function () {
+                    clientButton.classList.add('collapsed');
+                    clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
+                });
             }
         })
         .catch(error => {

@@ -95,26 +95,30 @@ savedTimersDiv.innerHTML = savedTimersTemplate;
 document.body.appendChild(savedTimersDiv);
 
 // Funzione per creare l'elemento HTML di un timer salvato come riga di tabella
-function createTimerRow(timerId, logData) {
+function createTimerRow(timerId, logData, isRecycleBin = false) {
     // Crea l'elemento riga (tr)
     const row = document.createElement('tr');
 
-    // Colonna per la checkbox
+    // Colonna per la checkbox (solo se non siamo nel cestino)
     const checkboxCell = document.createElement('td');
     checkboxCell.classList.add('text-center', 'align-middle');
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.classList.add('form-check-input', 'timer-checkbox');
-    checkbox.value = timerId;
-    checkbox.id = 'checkbox-' + timerId;
+    if (!isRecycleBin) {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.classList.add('form-check-input', 'timer-checkbox');
+        checkbox.value = timerId;
+        checkbox.id = 'checkbox-' + timerId;
+        checkboxCell.appendChild(checkbox);
+    } else {
+        checkboxCell.textContent = ''; // Lascia vuoto o aggiungi un'icona se preferisci
+    }
 
-    checkboxCell.appendChild(checkbox);
     row.appendChild(checkboxCell);
 
     // Colonna per Cliente e Sito con icona
     const clientCell = document.createElement('td');
-    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.siteName}`;
+    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.siteName || 'Sito Sconosciuto'}`;
     row.appendChild(clientCell);
 
     // Colonna per Tipo di Lavoro con icona
@@ -166,19 +170,44 @@ function createTimerRow(timerId, logData) {
     }
     row.appendChild(statusCell);
 
-    // Colonna per l'Azione Elimina con icona
+    // Colonna per l'Azione con icone appropriate
     const actionCell = document.createElement('td');
     actionCell.classList.add('text-center', 'align-middle');
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
-    deleteBtn.setAttribute('title', 'Elimina Timer'); // Testo del tooltip
-    deleteBtn.setAttribute('data-toggle', 'tooltip'); // Attributo per il tooltip
-    deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-    deleteBtn.addEventListener('click', () => {
-        deleteTimer(timerId, row);
-    });
-    actionCell.appendChild(deleteBtn);
+    if (isRecycleBin) {
+        // Pulsanti per il Cestino
+        const restoreBtn = document.createElement('button');
+        restoreBtn.classList.add('btn', 'btn-sm', 'btn-success', 'mr-2');
+        restoreBtn.setAttribute('title', 'Ripristina Timer');
+        restoreBtn.setAttribute('data-toggle', 'tooltip');
+        restoreBtn.innerHTML = '<i class="fas fa-undo-alt"></i>';
+        restoreBtn.addEventListener('click', () => {
+            restoreTimer(timerId, row);
+        });
+        actionCell.appendChild(restoreBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+        deleteBtn.setAttribute('title', 'Elimina Definitivamente');
+        deleteBtn.setAttribute('data-toggle', 'tooltip');
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteBtn.addEventListener('click', () => {
+            permanentlyDeleteTimer(timerId, row);
+        });
+        actionCell.appendChild(deleteBtn);
+    } else {
+        // Pulsante per Timer Salvati
+        const deleteBtn = document.createElement('button');
+        deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
+        deleteBtn.setAttribute('title', 'Elimina Timer');
+        deleteBtn.setAttribute('data-toggle', 'tooltip');
+        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+        deleteBtn.addEventListener('click', () => {
+            deleteTimer(timerId, row);
+        });
+        actionCell.appendChild(deleteBtn);
+    }
+
     row.appendChild(actionCell);
 
     return row;
@@ -261,21 +290,3 @@ function getMonthName(monthNumber) {
     return months[monthNumber - 1];
 }
 
-// Funzione per formattare la durata in ore, minuti e secondi
-function formatDuration(seconds) {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    const hrsDisplay = hrs > 0 ? (hrs < 10 ? '0' + hrs : hrs) + 'h ' : '00h ';
-    const minsDisplay = mins > 0 ? (mins < 10 ? '0' + mins : mins) + 'm ' : '00m ';
-    const secsDisplay = secs > 0 ? (secs < 10 ? '0' + secs : secs) + 's' : '00s';
-
-    return hrsDisplay + minsDisplay + secsDisplay;
-}
-
-// Funzione per formattare la data e l'ora
-function formatDateTime(timestamp) {
-    const date = new Date(timestamp.seconds * 1000);
-    return date.toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
-}
