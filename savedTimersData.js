@@ -512,7 +512,51 @@ function loadRecycleBin() {
                 clientButton.setAttribute('aria-controls', `recycle-collapse-${clientId}`);
                 clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
 
-                clientHeader.appendChild(clientButton);
+                // Pulsanti per Espandere/Comprimi Tutto per il Cliente
+                const expandAllBtn = document.createElement('button');
+                expandAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
+                expandAllBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
+                expandAllBtn.addEventListener('click', () => {
+                    const clientCollapseElement = $(`#recycle-collapse-${clientId}`);
+                    if (clientCollapseElement.hasClass('show')) {
+                        $(`#recycle-collapse-${clientId} .collapse`).collapse('show');
+                    } else {
+                        clientCollapseElement.collapse('show');
+                        const expandChildSections = function () {
+                            $(`#recycle-collapse-${clientId} .collapse`).collapse('show');
+                            clientCollapseElement.off('shown.bs.collapse', expandChildSections);
+                        };
+                        clientCollapseElement.on('shown.bs.collapse', expandChildSections);
+                    }
+                });
+
+                const collapseAllBtn = document.createElement('button');
+                collapseAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
+                collapseAllBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
+                collapseAllBtn.addEventListener('click', () => {
+                    $(`#recycle-collapse-${clientId} .collapse`).collapse('hide');
+                    $(`#recycle-collapse-${clientId}`).collapse('hide');
+                });
+
+                // Pulsante per Eliminare il Cliente (definitivamente)
+                const deleteClientBtn = document.createElement('button');
+                deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Cliente';
+                deleteClientBtn.addEventListener('click', () => {
+                    permanentlyDeleteClientTimers(clientName, clientSection);
+                });
+
+                const clientHeaderActions = document.createElement('div');
+                clientHeaderActions.appendChild(expandAllBtn);
+                clientHeaderActions.appendChild(collapseAllBtn);
+                clientHeaderActions.appendChild(deleteClientBtn);
+
+                const clientHeaderContainer = document.createElement('div');
+                clientHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                clientHeaderContainer.appendChild(clientButton);
+                clientHeaderContainer.appendChild(clientHeaderActions);
+
+                clientHeader.appendChild(clientHeaderContainer);
 
                 // Div per il collapse del Cliente
                 const clientCollapse = document.createElement('div');
@@ -550,7 +594,51 @@ function loadRecycleBin() {
                     yearButton.setAttribute('aria-controls', `recycle-collapse-${yearId}`);
                     yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
 
-                    yearHeader.appendChild(yearButton);
+                    // Pulsanti per Espandere/Comprimi Tutto per l'Anno
+                    const expandYearBtn = document.createElement('button');
+                    expandYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
+                    expandYearBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
+                    expandYearBtn.addEventListener('click', () => {
+                        const yearCollapseElement = $(`#recycle-collapse-${yearId}`);
+                        if (yearCollapseElement.hasClass('show')) {
+                            $(`#recycle-collapse-${yearId} .collapse`).collapse('show');
+                        } else {
+                            yearCollapseElement.collapse('show');
+                            const expandChildSections = function () {
+                                $(`#recycle-collapse-${yearId} .collapse`).collapse('show');
+                                yearCollapseElement.off('shown.bs.collapse', expandChildSections);
+                            };
+                            yearCollapseElement.on('shown.bs.collapse', expandChildSections);
+                        }
+                    });
+
+                    const collapseYearBtn = document.createElement('button');
+                    collapseYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
+                    collapseYearBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
+                    collapseYearBtn.addEventListener('click', () => {
+                        $(`#recycle-collapse-${yearId} .collapse`).collapse('hide');
+                        $(`#recycle-collapse-${yearId}`).collapse('hide');
+                    });
+
+                    // Pulsante per Eliminare l'Anno (definitivamente)
+                    const deleteYearBtn = document.createElement('button');
+                    deleteYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                    deleteYearBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Anno';
+                    deleteYearBtn.addEventListener('click', () => {
+                        permanentlyDeleteYearTimers(clientName, year, yearSection);
+                    });
+
+                    const yearHeaderActions = document.createElement('div');
+                    yearHeaderActions.appendChild(expandYearBtn);
+                    yearHeaderActions.appendChild(collapseYearBtn);
+                    yearHeaderActions.appendChild(deleteYearBtn);
+
+                    const yearHeaderContainer = document.createElement('div');
+                    yearHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                    yearHeaderContainer.appendChild(yearButton);
+                    yearHeaderContainer.appendChild(yearHeaderActions);
+
+                    yearHeader.appendChild(yearHeaderContainer);
 
                     // Div per il collapse dell'Anno
                     const yearCollapse = document.createElement('div');
@@ -592,7 +680,23 @@ function loadRecycleBin() {
 
                         monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
 
-                        monthHeader.appendChild(monthButton);
+                        // Pulsante per Eliminare il Mese (definitivamente)
+                        const deleteMonthBtn = document.createElement('button');
+                        deleteMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                        deleteMonthBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Mese';
+                        deleteMonthBtn.addEventListener('click', () => {
+                            permanentlyDeleteMonthTimers(clientName, year, month, monthSection);
+                        });
+
+                        const monthHeaderActions = document.createElement('div');
+                        monthHeaderActions.appendChild(deleteMonthBtn);
+
+                        const monthHeaderContainer = document.createElement('div');
+                        monthHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+                        monthHeaderContainer.appendChild(monthButton);
+                        monthHeaderContainer.appendChild(monthHeaderActions);
+
+                        monthHeader.appendChild(monthHeaderContainer);
 
                         // Div per il collapse del Mese
                         const monthCollapse = document.createElement('div');
