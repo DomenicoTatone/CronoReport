@@ -6,6 +6,36 @@ const dashboardTemplate = `
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-chart-line mr-2"></i>Dashboard Analitica
     </h2>
+    <!-- Sezione Filtri -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-filter mr-2"></i>Filtri</h5>
+        </div>
+        <div class="card-body">
+            <form id="dashboard-filter-form" class="row">
+                <div class="col-md-3">
+                    <label for="dashboard-filter-date-start" class="font-weight-bold">Data Inizio:</label>
+                    <input type="date" id="dashboard-filter-date-start" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="dashboard-filter-date-end" class="font-weight-bold">Data Fine:</label>
+                    <input type="date" id="dashboard-filter-date-end" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="dashboard-filter-client" class="font-weight-bold">Cliente:</label>
+                    <select id="dashboard-filter-client" class="form-control">
+                        <option value="">Tutti i Clienti</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button id="dashboard-filter-btn" type="button" class="btn btn-primary btn-block mt-2">
+                        <i class="fas fa-search mr-2"></i>Filtra Statistiche
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Grafici -->
     <div class="row">
         <div class="col-md-6">
             <!-- Carta per il tempo lavorato -->
@@ -72,36 +102,109 @@ function initializeDashboardEvents() {
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
+    // Carica i clienti nel filtro
+    loadClientsForDashboardFilter();
+
     // Assicura che il DOM sia aggiornato prima di chiamare le funzioni
     setTimeout(() => {
+        // Aggiungi event listener al pulsante di filtro
+        const filterBtn = document.getElementById('dashboard-filter-btn');
+        filterBtn.addEventListener('click', () => {
+            const filters = getDashboardFilters();
+            loadDashboardData(filters);
+        });
+
+        // Carica i dati iniziali senza filtri
         loadDashboardData();
     }, 0);
 }
 
 /**
+ * Funzione per caricare i clienti nel filtro
+ */
+function loadClientsForDashboardFilter() {
+    const clientSelect = document.getElementById('dashboard-filter-client');
+    clientSelect.innerHTML = '<option value="">Tutti i Clienti</option>';
+
+    db.collection('clients')
+        .where('uid', '==', currentUser.uid)
+        .orderBy('name')
+        .get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const client = doc.data();
+                const option = document.createElement('option');
+                option.value = client.name; // Usa il nome del cliente per il filtro
+                option.textContent = client.name;
+                clientSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento dei clienti per il filtro:', error);
+        });
+}
+
+/**
+ * Funzione per ottenere i filtri della dashboard
+ */
+function getDashboardFilters() {
+    const startDate = document.getElementById('dashboard-filter-date-start').value;
+    const endDate = document.getElementById('dashboard-filter-date-end').value;
+    const clientName = document.getElementById('dashboard-filter-client').value;
+
+    const filters = {};
+
+    if (startDate) {
+        filters.startDate = new Date(startDate + 'T00:00:00');
+    }
+    if (endDate) {
+        filters.endDate = new Date(endDate + 'T23:59:59');
+    }
+    if (clientName) {
+        filters.clientName = clientName;
+    }
+
+    return filters;
+}
+
+/**
  * Funzione per caricare i dati e generare i grafici
  */
-function loadDashboardData() {
-    // Utilizza un listener per aggiornamenti in tempo reale
-    db.collection('timeLogs')
+function loadDashboardData(filters = {}) {
+    let query = db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
-        .onSnapshot(snapshot => {
-            const timeLogs = snapshot.docs.map(doc => doc.data());
+        .where('isDeleted', '==', false);
 
-            // Prepara i dati per i grafici
-            prepareWorkedTimeChart(timeLogs);
-            prepareEarningsChart(timeLogs);
-            prepareWorktypeDistributionChart(timeLogs);
-            prepareClientWorkedTimeChart(timeLogs);
-        }, error => {
-            console.error('Errore nel caricamento dei dati della dashboard:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Errore',
-                text: 'Si è verificato un errore durante il caricamento dei dati della dashboard.',
-                confirmButtonText: 'OK'
-            });
+    if (filters.clientName) {
+        query = query.where('clientName', '==', filters.clientName);
+    }
+
+    if (filters.startDate) {
+        query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate));
+    }
+
+    if (filters.endDate) {
+        query = query.where('endTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
+    }
+
+    // Utilizza un listener per aggiornamenti in tempo reale
+    query.onSnapshot(snapshot => {
+        const timeLogs = snapshot.docs.map(doc => doc.data());
+
+        // Prepara i dati per i grafici
+        prepareWorkedTimeChart(timeLogs);
+        prepareEarningsChart(timeLogs);
+        prepareWorktypeDistributionChart(timeLogs);
+        prepareClientWorkedTimeChart(timeLogs);
+    }, error => {
+        console.error('Errore nel caricamento dei dati della dashboard:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'Si è verificato un errore durante il caricamento dei dati della dashboard.',
+            confirmButtonText: 'OK'
         });
+    });
 }
 
 /**
@@ -123,7 +226,7 @@ function prepareWorkedTimeChart(timeLogs) {
     const workedTimePerDay = {};
 
     timeLogs.forEach(log => {
-        const date = new Date(log.startTime.seconds * 1000).toLocaleDateString();
+        const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
         const durationInHours = log.duration / 3600;
 
         if (workedTimePerDay[date]) {
@@ -179,7 +282,7 @@ function prepareEarningsChart(timeLogs) {
     const earningsPerDay = {};
 
     timeLogs.forEach(log => {
-        const date = new Date(log.startTime.seconds * 1000).toLocaleDateString();
+        const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
         const durationInHours = log.duration / 3600;
         const hourlyRate = log.hourlyRate || 0;
         const amount = durationInHours * hourlyRate;
