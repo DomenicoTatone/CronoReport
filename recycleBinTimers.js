@@ -11,9 +11,10 @@ function loadRecycleBin() {
         .get()
         .then(snapshot => {
             if (snapshot.empty) {
-                const noTimersMessage = document.createElement('p');
-                noTimersMessage.textContent = 'Il cestino è vuoto.';
-                recycleBinList.appendChild(noTimersMessage);
+                const noTimersMessage = document.createElement('div');
+                noTimersMessage.classList.add('alert', 'alert-info');
+                noTimersMessage.textContent = 'Non ci sono timer eliminati nel cestino.';
+                recycleBinTimersDiv.appendChild(noTimersMessage);
                 return;
             }
 

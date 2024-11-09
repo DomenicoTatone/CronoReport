@@ -1,3 +1,5 @@
+// recycleBinReports.js
+
 function loadRecycleBinReports() {
     const recycleBinReportsDiv = document.getElementById('recycle-bin-reports');
     recycleBinReportsDiv.innerHTML = ''; // Svuota la lista
