@@ -11,10 +11,25 @@ googleLoginBtn.addEventListener('click', () => {
     // Inizializza il provider di Google
     const provider = new firebase.auth.GoogleAuthProvider();
 
+    // Aggiungi gli ambiti necessari per le API di Google
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    provider.addScope('https://www.googleapis.com/auth/documents');
+    provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+
     // Avvia l'autenticazione con popup
     firebase.auth().signInWithPopup(provider)
         .then((result) => {
             // Login riuscito
+            const user = result.user;
+
+            // Ottieni il token di accesso OAuth di Google
+            const credential = result.credential;
+            const accessToken = credential.accessToken;
+
+            // Memorizza il token di accesso per l'utilizzo nelle API di Google
+            localStorage.setItem('googleAccessToken', accessToken);
+
+            // Reindirizza alla pagina principale
             window.location.href = 'index.html';
         })
         .catch((error) => {

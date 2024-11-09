@@ -113,10 +113,17 @@ const reportTemplate = `
             </tbody>
         </table>
         <h4 class="text-right">Totale: € <span id="total-amount">0.00</span></h4>
-        <div class="text-center">
-            <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2"><i class="fas fa-file-pdf mr-2"></i>Scarica PDF</button>
-            <button id="download-csv-btn" class="btn btn-secondary mt-3"><i class="fas fa-file-csv mr-2"></i>Esporta CSV</button>
-        </div>
+<div class="text-center">
+    <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
+        <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
+    </button>
+    <button id="export-google-doc-btn" class="btn btn-primary mt-3 mr-2">
+        <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
+    </button>
+    <button id="export-google-sheet-btn" class="btn btn-primary mt-3">
+        <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
+    </button>
+</div>
     </div>
 </div>
 `;
@@ -415,25 +422,139 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64) {
     addLogoAndGeneratePDF();
 }
 
+function createGoogleDoc(reportContent) {
+    const doc = {
+        title: 'Report Generato'
+    };
 
-// Funzione per generare CSV
-function generateCSV(reportHeader, reportData) {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += `${reportHeader}\n\n`;
-    csvContent += "Data,Tipo di Lavoro,Link,Tempo Lavorato,Importo (€)\n";
+    gapi.client.request({
+        'path': 'https://docs.googleapis.com/v1/documents',
+        'method': 'POST',
+        'body': doc
+    }).then((response) => {
+        const documentId = response.result.documentId;
 
-    reportData.forEach(item => {
-        const row = [item.date, item.workType, item.link, item.timeWorked, item.amount].join(",");
-        csvContent += row + "\n";
+        // Inserisci il contenuto nel documento
+        insertContentIntoDoc(documentId, reportContent);
+    }, (error) => {
+        console.error('Errore durante la creazione del documento:', error);
+    });
+}
+
+function insertContentIntoDoc(documentId, reportContent) {
+    const requests = [];
+
+    // Aggiungi il testo al documento
+    requests.push({
+        insertText: {
+            location: {
+                index: 1 // Inserisci dopo l'inizio del documento
+            },
+            text: reportContent
+        }
     });
 
-    // Crea il link per il download
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "report.csv");
-    document.body.appendChild(link);
+    gapi.client.request({
+        'path': `https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`,
+        'method': 'POST',
+        'body': {
+            requests: requests
+        }
+    }).then((response) => {
+        console.log('Contenuto inserito nel documento:', response);
+        // Apri il documento in una nuova scheda
+        window.open(`https://docs.google.com/document/d/${documentId}/edit`, '_blank');
+    }, (error) => {
+        console.error('Errore durante l\'inserimento del contenuto:', error);
+    });
+}
 
-    link.click();
-    document.body.removeChild(link);
+function generateReportContentString(reportHeader, reportData, totalAmount) {
+  let content = `${reportHeader}\n\n`;
+
+  reportData.forEach(item => {
+    content += `Data: ${item.date}\n`;
+    content += `Tipo di Lavoro: ${item.workType}\n`;
+    content += `Link: ${item.link}\n`;
+    content += `Tempo Lavorato: ${item.timeWorked}\n`;
+    content += `Importo (€): ${item.amount}\n`;
+    content += '\n';
+  });
+
+  content += `Totale: € ${totalAmount.toFixed(2)}\n`;
+
+  return content;
+}
+
+function createGoogleSheet(reportValues) {
+    const spreadsheet = {
+        properties: {
+            title: 'Report Generato'
+        },
+        sheets: [
+            {
+                properties: {
+                    title: 'Report'
+                }
+            }
+        ]
+    };
+
+    gapi.client.request({
+        path: 'https://sheets.googleapis.com/v4/spreadsheets',
+        method: 'POST',
+        body: spreadsheet
+    }).then((response) => {
+        const spreadsheetId = response.result.spreadsheetId;
+        const sheetName = 'Report';
+
+        // Inserisci i dati nel foglio
+        insertDataIntoSheet(spreadsheetId, sheetName, reportValues);
+    }, (error) => {
+        console.error('Errore durante la creazione del foglio di calcolo:', error);
+    });
+}
+
+function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
+    const range = `${encodeURIComponent(sheetName)}!A1`;
+
+    gapi.client.request({
+        path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append`,
+        method: 'POST',
+        params: {
+            valueInputOption: 'RAW'
+        },
+        body: {
+            values: reportValues
+        }
+    }).then((response) => {
+        console.log('Dati inseriti nel foglio di calcolo:', response);
+        // Apri il foglio di calcolo in una nuova scheda
+        window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
+    }, (error) => {
+        console.error('Errore durante l\'inserimento dei dati:', error);
+    });
+}
+
+
+function generateReportValuesArray(reportHeader, reportData, totalAmount) {
+    const values = [];
+
+    // Aggiungi l'intestazione del report
+    values.push([reportHeader]);
+    values.push([]); // Riga vuota
+
+    // Aggiungi le intestazioni delle colonne
+    values.push(['Data', 'Tipo di Lavoro', 'Link', 'Tempo Lavorato', 'Importo (€)']);
+
+    // Aggiungi le righe dei dati
+    reportData.forEach(item => {
+        values.push([item.date, item.workType, item.link, item.timeWorked, item.amount]);
+    });
+
+    // Aggiungi una riga vuota e il totale
+    values.push([]);
+    values.push(['', '', '', 'Totale', totalAmount.toFixed(2)]);
+
+    return values;
 }
