@@ -241,10 +241,10 @@ function setupReportSection() {
         const startDateInputVal = startDateInput.value;
         const endDateInputVal = endDateInput.value;
         const configName = configNameInput.value.trim();
-
+    
         // Validazione avanzata
         let errorMessage = '';
-
+    
         // Validazione dei campi
         if (!reportHeader) {
             errorMessage += '• Inserisci l\'intestazione del report.\n';
@@ -261,7 +261,7 @@ function setupReportSection() {
         if (startDateInputVal && endDateInputVal && new Date(startDateInputVal) > new Date(endDateInputVal)) {
             errorMessage += '• La data di inizio non può essere successiva alla data di fine.\n';
         }
-
+    
         if (errorMessage) {
             Swal.fire({
                 icon: 'warning',
@@ -271,16 +271,16 @@ function setupReportSection() {
             });
             return;
         }
-
+    
         const startDate = new Date(startDateInputVal);
         const endDate = new Date(endDateInputVal);
         endDate.setHours(23, 59, 59, 999); // Include tutta la giornata per la data di fine
-
+    
         // Ottieni i valori dei filtri
         const filterClient = document.getElementById('filter-client').value;
         const filterSite = document.getElementById('filter-site').value;
         const filterWorktype = document.getElementById('filter-worktype').value;
-
+    
         // Salva la configurazione se è stato inserito un nome
         if (configName) {
             saveReportConfig({
@@ -293,11 +293,20 @@ function setupReportSection() {
                 filterWorktype
             });
         }
-
+    
         // Pulisci il contenuto precedente del report
         reportTableBody.innerHTML = '';
         totalAmountDisplay.textContent = '0.00';
-
+    
+        // Genera il nome del report
+        const reportFileName = `${reportHeader} - ${startDateInputVal} a ${endDateInputVal}`;
+    
+        // Funzione per sanitizzare il nome del file
+        function sanitizeFileName(fileName) {
+            return fileName.replace(/[\/\\?%*:|"<>]/g, '-');
+        }
+        const sanitizedReportFileName = sanitizeFileName(reportFileName);
+    
         // Mostra l'intestazione del report con il logo
         reportHeaderDisplay.innerHTML = `
             <div style="display: flex; align-items: center; justify-content: center;">
@@ -305,13 +314,13 @@ function setupReportSection() {
                 <h3 style="margin: 0;">${reportHeader}</h3>
             </div>
         `;
-
+    
         // Costruisci la query Firestore con i filtri
         let query = db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
             .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(startDate))
             .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
-
+    
         if (filterClient) {
             query = query.where('clientId', '==', filterClient);
         }
@@ -321,7 +330,7 @@ function setupReportSection() {
         if (filterWorktype) {
             query = query.where('worktypeId', '==', filterWorktype);
         }
-
+    
         query.orderBy('startTime', 'asc')
             .get()
             .then(snapshot => {
@@ -335,21 +344,21 @@ function setupReportSection() {
                     reportContent.style.display = 'none';
                     return;
                 }
-
+    
                 let totalAmount = 0;
                 let reportData = [];
                 let timerIds = []; // Array per memorizzare gli ID dei timer inclusi nel report
-
+    
                 snapshot.forEach(doc => {
                     const logData = doc.data();
                     timerIds.push(doc.id); // Aggiungi l'ID del timer per contrassegnarlo come reportato
-
+    
                     const durationInHours = logData.duration / 3600;
                     const amount = durationInHours * hourlyRate;
                     totalAmount += amount;
-
+    
                     const linkText = logData.link ? extractDomainName(logData.link) : '-';
-
+    
                     const dataRow = {
                         date: new Date(logData.startTime.seconds * 1000).toLocaleDateString(),
                         workType: logData.worktypeName,
@@ -358,18 +367,18 @@ function setupReportSection() {
                         timeWorked: formatDuration(logData.duration),
                         amount: amount.toFixed(2)
                     };
-
+    
                     reportData.push(dataRow);
-
+    
                     // Crea una riga della tabella
                     const tr = document.createElement('tr');
-
+    
                     const tdDate = document.createElement('td');
                     tdDate.textContent = dataRow.date;
-
+    
                     const tdWorkType = document.createElement('td');
                     tdWorkType.textContent = dataRow.workType;
-
+    
                     const tdLink = document.createElement('td');
                     if (dataRow.link) {
                         const linkElement = document.createElement('a');
@@ -380,55 +389,55 @@ function setupReportSection() {
                     } else {
                         tdLink.textContent = '-';
                     }
-
+    
                     const tdTimeWorked = document.createElement('td');
                     tdTimeWorked.textContent = dataRow.timeWorked;
-
+    
                     const tdAmount = document.createElement('td');
                     tdAmount.textContent = `€ ${dataRow.amount}`;
-
+    
                     tr.appendChild(tdDate);
                     tr.appendChild(tdWorkType);
                     tr.appendChild(tdLink);
                     tr.appendChild(tdTimeWorked);
                     tr.appendChild(tdAmount);
-
+    
                     reportTableBody.appendChild(tr);
                 });
-
+    
                 totalAmountDisplay.textContent = totalAmount.toFixed(2);
                 reportContent.style.display = 'block';
-
+    
                 // Contrassegna i timer inclusi nel report come "reportati"
                 markTimersAsReported(timerIds);
-
+    
                 // Aggiungi event listeners per i pulsanti di download
-                downloadPdfBtn.onclick = () => generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64);
-
+                downloadPdfBtn.onclick = () => generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, sanitizedReportFileName);
+    
                 // Event listener per i pulsanti di esportazione Google
                 if (exportGoogleDocBtn) {
                     exportGoogleDocBtn.onclick = () => {
                         const reportContentString = generateReportContentString(reportHeader, reportData, totalAmount);
-                        createGoogleDoc(reportContentString);
+                        createGoogleDoc(reportContentString, sanitizedReportFileName);
                     };
                 }
-
+    
                 if (exportGoogleSheetBtn) {
                     exportGoogleSheetBtn.onclick = () => {
                         const reportValuesArray = generateReportValuesArray(reportHeader, reportData, totalAmount);
-                        createGoogleSheet(reportValuesArray);
+                        createGoogleSheet(reportValuesArray, sanitizedReportFileName);
                     };
                 }
-
+    
                 // Salva i dettagli del report nel database
                 let filterClientName = '';
                 let filterSiteName = '';
                 let filterWorktypeName = '';
-
+    
                 const clientSelect = document.getElementById('filter-client');
                 const siteSelect = document.getElementById('filter-site');
                 const worktypeSelect = document.getElementById('filter-worktype');
-
+    
                 if (clientSelect.value) {
                     filterClientName = clientSelect.options[clientSelect.selectedIndex].text;
                 }
@@ -438,7 +447,7 @@ function setupReportSection() {
                 if (worktypeSelect.value) {
                     filterWorktypeName = worktypeSelect.options[worktypeSelect.selectedIndex].text;
                 }
-
+    
                 const reportDetails = {
                     uid: currentUser.uid,
                     reportHeader: reportHeader,
@@ -454,10 +463,10 @@ function setupReportSection() {
                     totalAmount: totalAmount,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     companyLogoBase64: companyLogoBase64,
-                    reportName: reportHeader + ' - ' + startDateInputVal + ' a ' + endDateInputVal,
+                    reportName: sanitizedReportFileName,
                     reportDataArray: reportData // Aggiunto reportDataArray
                 };
-
+    
                 db.collection('reports').add(reportDetails)
                     .then(() => {
                         console.log('Report salvato nello storico.');
@@ -475,7 +484,7 @@ function setupReportSection() {
                     confirmButtonText: 'OK'
                 });
             });
-    });
+    });    
 
     // Recupera il token di accesso e inizializza il client delle API di Google
     const accessToken = localStorage.getItem('googleAccessToken');

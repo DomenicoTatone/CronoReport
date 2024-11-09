@@ -309,7 +309,7 @@ function applySavedConfig(configId) {
 }
 
 // Funzione per generare il PDF usando jsPDF
-function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64) {
+function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, reportFileName) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -415,22 +415,22 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64) {
         doc.text(`Totale: € ${totalAmount.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
 
         // Salva il PDF
-        doc.save('report.pdf');
+        doc.save(`${reportFileName}.pdf`);
     }
 
     // Inizia la generazione del PDF
     addLogoAndGeneratePDF();
 }
 
-function createGoogleDoc(reportContent) {
+function createGoogleDoc(reportContent, reportFileName) {
     const doc = {
-        title: 'Report Generato'
+        title: reportFileName
     };
 
     gapi.client.request({
-        'path': 'https://docs.googleapis.com/v1/documents',
-        'method': 'POST',
-        'body': doc
+        path: 'https://docs.googleapis.com/v1/documents',
+        method: 'POST',
+        body: doc
     }).then((response) => {
         const documentId = response.result.documentId;
 
@@ -486,10 +486,10 @@ function generateReportContentString(reportHeader, reportData, totalAmount) {
   return content;
 }
 
-function createGoogleSheet(reportValues) {
+function createGoogleSheet(reportValues, reportFileName) {
     const spreadsheet = {
         properties: {
-            title: 'Report Generato'
+            title: reportFileName
         },
         sheets: [
             {
