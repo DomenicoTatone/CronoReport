@@ -12,8 +12,9 @@ function loadRecycleBinReports() {
         .then(snapshot => {
             if (snapshot.empty) {
                 const noReportsMessage = document.createElement('p');
+                noReportsMessage.classList.add('alert', 'alert-info');
                 noReportsMessage.textContent = 'Non ci sono report eliminati nel cestino.';
-                recycleBinReportsList.appendChild(noReportsMessage);
+                recycleBinReportsDiv.appendChild(noReportsMessage);
                 return;
             }
 
