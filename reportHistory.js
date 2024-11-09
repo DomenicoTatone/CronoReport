@@ -32,10 +32,9 @@ function initializeReportHistoryEvents() {
      */
     function loadReportHistory() {
         reportHistoryAccordion.innerHTML = ''; // Svuota la lista
-
+    
         db.collection('reports')
             .where('uid', '==', currentUser.uid)
-            .where('isDeleted', '==', false)
             .orderBy('timestamp', 'desc')
             .get()
             .then(snapshot => {
@@ -46,21 +45,27 @@ function initializeReportHistoryEvents() {
                     reportHistoryAccordion.appendChild(emptyMessage);
                 } else {
                     const reportsByClientYear = {};
-
+    
                     snapshot.forEach((doc) => {
                         const reportData = doc.data();
                         const reportId = doc.id;
-
+    
+                        // **Aggiungi questo controllo per filtrare i report eliminati**
+                        if (reportData.isDeleted && reportData.isDeleted === true) {
+                            // Salta questo report perché è stato eliminato
+                            return;
+                        }
+    
                         const clientName = reportData.filterClientName || 'Cliente Sconosciuto';
                         const reportYear = new Date(reportData.startDate).getFullYear();
-
+    
                         if (!reportsByClientYear[clientName]) {
                             reportsByClientYear[clientName] = {};
                         }
                         if (!reportsByClientYear[clientName][reportYear]) {
                             reportsByClientYear[clientName][reportYear] = [];
                         }
-
+    
                         reportsByClientYear[clientName][reportYear].push({
                             id: reportId,
                             data: reportData
