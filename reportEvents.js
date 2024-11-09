@@ -371,7 +371,8 @@ function setupReportSection() {
                     totalAmount: totalAmount,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     companyLogoBase64: companyLogoBase64,
-                    reportName: reportHeader + ' - ' + startDateInputVal + ' a ' + endDateInputVal
+                    reportName: reportHeader + ' - ' + startDateInputVal + ' a ' + endDateInputVal,
+                    reportDataArray: reportData // Aggiunto reportDataArray
                 };
 
                 db.collection('reports').add(reportDetails)
@@ -381,8 +382,6 @@ function setupReportSection() {
                     .catch(error => {
                         console.error('Errore nel salvataggio del report nello storico:', error);
                     });
-                // --- Fine Aggiornamento ---
-
             })
             .catch(error => {
                 console.error('Errore nel caricamento dei dati per il report:', error);
