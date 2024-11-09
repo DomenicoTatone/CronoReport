@@ -1,6 +1,6 @@
 function loadRecycleBinReports() {
-    const recycleBinReportsList = document.getElementById('recycle-bin-reports-list');
-    recycleBinReportsList.innerHTML = ''; // Svuota la lista
+    const recycleBinReportsDiv = document.getElementById('recycle-bin-reports');
+    recycleBinReportsDiv.innerHTML = ''; // Svuota la lista
 
     db.collection('reports')
         .where('uid', '==', currentUser.uid)
@@ -188,7 +188,7 @@ function loadRecycleBinReports() {
                     clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
                 });
 
-                recycleBinReportsList.appendChild(clientSection);
+                recycleBinReportsDiv.appendChild(clientSection);
             }
         })
         .catch(error => {

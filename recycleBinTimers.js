@@ -1,8 +1,8 @@
 // recycleBinTimers.js
 
 function loadRecycleBin() {
-    const recycleBinList = document.getElementById('recycle-bin-list');
-    recycleBinList.innerHTML = ''; // Svuota la lista
+    const recycleBinTimersDiv = document.getElementById('recycle-bin-timers');
+    recycleBinTimersDiv.innerHTML = ''; // Svuota la lista
 
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
@@ -366,7 +366,7 @@ function loadRecycleBin() {
                 clientSection.appendChild(clientCollapse);
 
                 // Aggiungi il cliente alla lista principale
-                recycleBinList.appendChild(clientSection);
+                recycleBinTimersDiv.appendChild(clientSection);
 
                 // Inizializza la sezione collassabile del cliente
                 $(clientCollapse).collapse({

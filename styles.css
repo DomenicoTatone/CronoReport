@@ -88,3 +88,49 @@ body {
     margin: 0 auto;
     /* Centra il container */
 }
+
+/* Stili per le tab del Cestino */
+#recycle-bin-section .nav-tabs .nav-link {
+    color: #495057;
+    font-weight: bold;
+}
+
+#recycle-bin-section .nav-tabs .nav-link.active {
+    color: #fff;
+    background-color: #007bff;
+}
+
+#recycle-bin-section .tab-content {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    padding: 20px;
+    background-color: #f8f9fa;
+}
+
+/* Stili per le card dei timer e report eliminati */
+.recycle-card {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    background-color: #fff;
+}
+
+.recycle-card-header {
+    background-color: #e9ecef;
+    padding: 10px 15px;
+    font-weight: bold;
+}
+
+.recycle-card-body {
+    padding: 15px;
+}
+
+/* Pulsanti azione */
+.action-buttons .btn {
+    margin-right: 5px;
+}
+
+/* Stili per le icone */
+.recycle-card-header i {
+    margin-right: 10px;
+}

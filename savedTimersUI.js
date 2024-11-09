@@ -76,45 +76,37 @@ const savedTimersTemplate = `
 </div>
 
 <!-- Sezione Cestino -->
-<div id="recycle-bin-section" class="container mt-5" style="display: none;">
+<div id="recycle-bin-section" class="container mt-5 custom-container" style="display: none;">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-trash-alt mr-2"></i>Cestino
     </h2>
 
-    <div class="accordion" id="recycleBinAccordion">
-        <!-- Timer Eliminati -->
-        <div class="card">
-            <div class="card-header" id="recycleBinTimersHeader">
-                <h5 class="mb-0">
-                    <button class="btn btn-link text-left" data-toggle="collapse" data-target="#recycleBinTimersCollapse" aria-expanded="true" aria-controls="recycleBinTimersCollapse">
-                        <i class="fas fa-chevron-down mr-2"></i>Timer Eliminati
-                    </button>
-                </h5>
-            </div>
-            <div id="recycleBinTimersCollapse" class="collapse show" aria-labelledby="recycleBinTimersHeader" data-parent="#recycleBinAccordion">
-                <div class="card-body">
-                    <div id="recycle-bin-list">
-                        <!-- I timer eliminati saranno caricati qui -->
-                    </div>
-                </div>
+    <!-- Navigazione tra Timer e Report Eliminati -->
+    <ul class="nav nav-tabs" id="recycleBinTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="timers-tab" data-toggle="tab" href="#timers" role="tab" aria-controls="timers" aria-selected="true">
+                <i class="fas fa-stopwatch mr-2"></i>Timer Eliminati
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="reports-tab" data-toggle="tab" href="#reports" role="tab" aria-controls="reports" aria-selected="false">
+                <i class="fas fa-file-alt mr-2"></i>Report Eliminati
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="recycleBinTabsContent">
+        <!-- Tab Timer Eliminati -->
+        <div class="tab-pane fade show active" id="timers" role="tabpanel" aria-labelledby="timers-tab">
+            <div id="recycle-bin-timers" class="mt-4">
+                <!-- I timer eliminati saranno caricati qui -->
             </div>
         </div>
 
-        <!-- Report Eliminati -->
-        <div class="card">
-            <div class="card-header" id="recycleBinReportsHeader">
-                <h5 class="mb-0">
-                    <button class="btn btn-link text-left" data-toggle="collapse" data-target="#recycleBinReportsCollapse" aria-expanded="true" aria-controls="recycleBinReportsCollapse">
-                        <i class="fas fa-chevron-down mr-2"></i>Report Eliminati
-                    </button>
-                </h5>
-            </div>
-            <div id="recycleBinReportsCollapse" class="collapse show" aria-labelledby="recycleBinReportsHeader" data-parent="#recycleBinAccordion">
-                <div class="card-body">
-                    <div id="recycle-bin-reports-list">
-                        <!-- I report eliminati saranno caricati qui -->
-                    </div>
-                </div>
+        <!-- Tab Report Eliminati -->
+        <div class="tab-pane fade" id="reports" role="tabpanel" aria-labelledby="reports-tab">
+            <div id="recycle-bin-reports" class="mt-4">
+                <!-- I report eliminati saranno caricati qui -->
             </div>
         </div>
     </div>
