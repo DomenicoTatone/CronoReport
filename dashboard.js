@@ -1,5 +1,7 @@
 // dashboard.js
 
+let dashboardUnsubscribe = null;
+
 // Template per la sezione Dashboard
 const dashboardTemplate = `
 <div id="dashboard-section" class="container mt-5 custom-container">
@@ -98,25 +100,22 @@ let clientWorkedTimeChartInstance = null;
  * Funzione per inizializzare gli eventi della Dashboard
  */
 function initializeDashboardEvents() {
-    // Inserisci il template nel contenitore principale
+    // Insert the dashboard template into the content section
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
-    // Carica i clienti nel filtro
+    // Load clients for the dashboard filter
     loadClientsForDashboardFilter();
 
-    // Assicura che il DOM sia aggiornato prima di chiamare le funzioni
-    setTimeout(() => {
-        // Aggiungi event listener al pulsante di filtro
-        const filterBtn = document.getElementById('dashboard-filter-btn');
-        filterBtn.addEventListener('click', () => {
-            const filters = getDashboardFilters();
-            loadDashboardData(filters);
-        });
+    // Add event listener to the filter button
+    const filterBtn = document.getElementById('dashboard-filter-btn');
+    filterBtn.addEventListener('click', () => {
+        const filters = getDashboardFilters();
+        loadDashboardData(filters);
+    });
 
-        // Carica i dati iniziali senza filtri
-        loadDashboardData();
-    }, 0);
+    // Load the initial dashboard data
+    loadDashboardData();
 }
 
 /**
@@ -187,11 +186,17 @@ function loadDashboardData(filters = {}) {
         query = query.where('endTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
     }
 
-    // Utilizza un listener per aggiornamenti in tempo reale
-    query.onSnapshot(snapshot => {
+    // Unsubscribe from the previous listener if it exists
+    if (dashboardUnsubscribe) {
+        dashboardUnsubscribe();
+        dashboardUnsubscribe = null;
+    }
+
+    // Set up the new listener and store the unsubscribe function
+    dashboardUnsubscribe = query.onSnapshot(snapshot => {
         const timeLogs = snapshot.docs.map(doc => doc.data());
 
-        // Prepara i dati per i grafici
+        // Prepare the charts
         prepareWorkedTimeChart(timeLogs);
         prepareEarningsChart(timeLogs);
         prepareWorktypeDistributionChart(timeLogs);
