@@ -80,9 +80,43 @@ const savedTimersTemplate = `
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
         <i class="fas fa-trash-alt mr-2"></i>Cestino
     </h2>
-    <!-- Lista Timer nel Cestino -->
-    <div id="recycle-bin-list" class="table-responsive">
-        <!-- Timer nel cestino saranno inseriti qui -->
+
+    <div class="accordion" id="recycleBinAccordion">
+        <!-- Timer Eliminati -->
+        <div class="card">
+            <div class="card-header" id="recycleBinTimersHeader">
+                <h5 class="mb-0">
+                    <button class="btn btn-link text-left" data-toggle="collapse" data-target="#recycleBinTimersCollapse" aria-expanded="true" aria-controls="recycleBinTimersCollapse">
+                        <i class="fas fa-chevron-down mr-2"></i>Timer Eliminati
+                    </button>
+                </h5>
+            </div>
+            <div id="recycleBinTimersCollapse" class="collapse show" aria-labelledby="recycleBinTimersHeader" data-parent="#recycleBinAccordion">
+                <div class="card-body">
+                    <div id="recycle-bin-list">
+                        <!-- I timer eliminati saranno caricati qui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Eliminati -->
+        <div class="card">
+            <div class="card-header" id="recycleBinReportsHeader">
+                <h5 class="mb-0">
+                    <button class="btn btn-link text-left" data-toggle="collapse" data-target="#recycleBinReportsCollapse" aria-expanded="true" aria-controls="recycleBinReportsCollapse">
+                        <i class="fas fa-chevron-down mr-2"></i>Report Eliminati
+                    </button>
+                </h5>
+            </div>
+            <div id="recycleBinReportsCollapse" class="collapse show" aria-labelledby="recycleBinReportsHeader" data-parent="#recycleBinAccordion">
+                <div class="card-body">
+                    <div id="recycle-bin-reports-list">
+                        <!-- I report eliminati saranno caricati qui -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 `;

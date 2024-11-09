@@ -1,42 +1,19 @@
-// savedTimersData.js
+// recycleBinTimers.js
 
-// Variabile per memorizzare i timer attualmente visualizzati
-let displayedTimers = [];
+function loadRecycleBin() {
+    const recycleBinList = document.getElementById('recycle-bin-list');
+    recycleBinList.innerHTML = ''; // Svuota la lista
 
-// Variabile per memorizzare l'ultima operazione
-let lastOperation = null;
-
-// Funzione per caricare i timer salvati in base ai filtri
-function loadSavedTimers(filters = {}) {
-    const savedTimersList = document.getElementById('savedTimersAccordion');
-    savedTimersList.innerHTML = ''; // Svuota la lista
-
-    // Definizione della query per ottenere i timer dal database
-    let query = db.collection('timeLogs')
+    db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
-        .where('isDeleted', '==', false);
-
-    // Applica i filtri se presenti
-    if (filters.startDate) {
-        query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(new Date(filters.startDate)));
-    }
-    if (filters.endDate) {
-        const endDateObj = new Date(filters.endDate);
-        endDateObj.setHours(23, 59, 59, 999); // Include tutta la giornata
-        query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDateObj));
-    }
-    if (filters.clientId) {
-        query = query.where('clientId', '==', filters.clientId);
-    }
-
-    query.orderBy('startTime', 'desc').get()
+        .where('isDeleted', '==', true)
+        .orderBy('deletedAt', 'desc')
+        .get()
         .then(snapshot => {
-            displayedTimers = []; // Reset della lista dei timer visualizzati
-
             if (snapshot.empty) {
                 const noTimersMessage = document.createElement('p');
-                noTimersMessage.textContent = 'Non ci sono timer salvati.';
-                savedTimersList.appendChild(noTimersMessage);
+                noTimersMessage.textContent = 'Il cestino è vuoto.';
+                recycleBinList.appendChild(noTimersMessage);
                 return;
             }
 
@@ -47,12 +24,12 @@ function loadSavedTimers(filters = {}) {
                 const logData = doc.data();
                 const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-                // Ottieni la data di inizio del timer
-                const startTime = logData.startTime.toDate();
+                // Ottieni la data di eliminazione o di inizio se deletedAt non è disponibile
+                const deletedAt = logData.deletedAt ? logData.deletedAt.toDate() : logData.startTime.toDate();
 
                 // Ottieni l'anno e il mese
-                const year = startTime.getFullYear();
-                const month = String(startTime.getMonth() + 1).padStart(2, '0'); // Mese con zero iniziale
+                const year = deletedAt.getFullYear();
+                const month = String(deletedAt.getMonth() + 1).padStart(2, '0'); // Mese con zero iniziale
 
                 if (!timersByClient[clientName]) {
                     timersByClient[clientName] = {};
@@ -70,34 +47,28 @@ function loadSavedTimers(filters = {}) {
                     id: doc.id,
                     data: logData
                 });
-
-                // Aggiungi il timer all'array dei timer visualizzati
-                displayedTimers.push({
-                    id: doc.id,
-                    data: logData
-                });
             });
 
             // Generazione dell'HTML per visualizzare i timer raggruppati
             let clientIndex = 0;
             for (const clientName in timersByClient) {
                 clientIndex++;
-                const clientId = `client-${clientIndex}`;
+                const clientId = `recycle-client-${clientIndex}`;
                 const clientSection = document.createElement('div');
                 clientSection.classList.add('card');
 
                 // Card Header per il Cliente
                 const clientHeader = document.createElement('div');
                 clientHeader.classList.add('card-header');
-                clientHeader.id = `heading-${clientId}`;
+                clientHeader.id = `recycle-heading-${clientId}`;
 
                 // Pulsante per espandere/comprimere il Cliente
                 const clientButton = document.createElement('button');
                 clientButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
                 clientButton.setAttribute('data-toggle', 'collapse');
-                clientButton.setAttribute('data-target', `#collapse-${clientId}`);
+                clientButton.setAttribute('data-target', `#recycle-collapse-${clientId}`);
                 clientButton.setAttribute('aria-expanded', 'false');
-                clientButton.setAttribute('aria-controls', `collapse-${clientId}`);
+                clientButton.setAttribute('aria-controls', `recycle-collapse-${clientId}`);
                 clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
 
                 // Pulsanti per Espandere/Comprimi Tutto per il Cliente
@@ -105,13 +76,13 @@ function loadSavedTimers(filters = {}) {
                 expandAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
                 expandAllBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
                 expandAllBtn.addEventListener('click', () => {
-                    const clientCollapseElement = $(`#collapse-${clientId}`);
+                    const clientCollapseElement = $(`#recycle-collapse-${clientId}`);
                     if (clientCollapseElement.hasClass('show')) {
-                        $(`#collapse-${clientId} .collapse`).collapse('show');
+                        $(`#recycle-collapse-${clientId} .collapse`).collapse('show');
                     } else {
                         clientCollapseElement.collapse('show');
                         const expandChildSections = function () {
-                            $(`#collapse-${clientId} .collapse`).collapse('show');
+                            $(`#recycle-collapse-${clientId} .collapse`).collapse('show');
                             clientCollapseElement.off('shown.bs.collapse', expandChildSections);
                         };
                         clientCollapseElement.on('shown.bs.collapse', expandChildSections);
@@ -122,16 +93,16 @@ function loadSavedTimers(filters = {}) {
                 collapseAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
                 collapseAllBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
                 collapseAllBtn.addEventListener('click', () => {
-                    $(`#collapse-${clientId} .collapse`).collapse('hide');
-                    $(`#collapse-${clientId}`).collapse('hide');
+                    $(`#recycle-collapse-${clientId} .collapse`).collapse('hide');
+                    $(`#recycle-collapse-${clientId}`).collapse('hide');
                 });
 
-                // Pulsante per Eliminare il Cliente
+                // Pulsante per Eliminare il Cliente (definitivamente)
                 const deleteClientBtn = document.createElement('button');
                 deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
                 deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Cliente';
                 deleteClientBtn.addEventListener('click', () => {
-                    deleteClientTimers(clientName, clientSection);
+                    permanentlyDeleteClientTimers(clientName, clientSection);
                 });
 
                 const clientHeaderActions = document.createElement('div');
@@ -148,9 +119,9 @@ function loadSavedTimers(filters = {}) {
 
                 // Div per il collapse del Cliente
                 const clientCollapse = document.createElement('div');
-                clientCollapse.id = `collapse-${clientId}`;
+                clientCollapse.id = `recycle-collapse-${clientId}`;
                 clientCollapse.classList.add('collapse');
-                clientCollapse.setAttribute('aria-labelledby', `heading-${clientId}`);
+                clientCollapse.setAttribute('aria-labelledby', `recycle-heading-${clientId}`);
 
                 const clientBody = document.createElement('div');
                 clientBody.classList.add('card-body');
@@ -172,14 +143,14 @@ function loadSavedTimers(filters = {}) {
                     // Header per l'Anno
                     const yearHeader = document.createElement('div');
                     yearHeader.classList.add('card-header');
-                    yearHeader.id = `heading-${yearId}`;
+                    yearHeader.id = `recycle-heading-${yearId}`;
 
                     const yearButton = document.createElement('button');
                     yearButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
                     yearButton.setAttribute('data-toggle', 'collapse');
-                    yearButton.setAttribute('data-target', `#collapse-${yearId}`);
+                    yearButton.setAttribute('data-target', `#recycle-collapse-${yearId}`);
                     yearButton.setAttribute('aria-expanded', 'false');
-                    yearButton.setAttribute('aria-controls', `collapse-${yearId}`);
+                    yearButton.setAttribute('aria-controls', `recycle-collapse-${yearId}`);
                     yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
 
                     // Pulsanti per Espandere/Comprimi Tutto per l'Anno
@@ -187,13 +158,13 @@ function loadSavedTimers(filters = {}) {
                     expandYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
                     expandYearBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
                     expandYearBtn.addEventListener('click', () => {
-                        const yearCollapseElement = $(`#collapse-${yearId}`);
+                        const yearCollapseElement = $(`#recycle-collapse-${yearId}`);
                         if (yearCollapseElement.hasClass('show')) {
-                            $(`#collapse-${yearId} .collapse`).collapse('show');
+                            $(`#recycle-collapse-${yearId} .collapse`).collapse('show');
                         } else {
                             yearCollapseElement.collapse('show');
                             const expandChildSections = function () {
-                                $(`#collapse-${yearId} .collapse`).collapse('show');
+                                $(`#recycle-collapse-${yearId} .collapse`).collapse('show');
                                 yearCollapseElement.off('shown.bs.collapse', expandChildSections);
                             };
                             yearCollapseElement.on('shown.bs.collapse', expandChildSections);
@@ -204,16 +175,16 @@ function loadSavedTimers(filters = {}) {
                     collapseYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
                     collapseYearBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
                     collapseYearBtn.addEventListener('click', () => {
-                        $(`#collapse-${yearId} .collapse`).collapse('hide');
-                        $(`#collapse-${yearId}`).collapse('hide');
+                        $(`#recycle-collapse-${yearId} .collapse`).collapse('hide');
+                        $(`#recycle-collapse-${yearId}`).collapse('hide');
                     });
 
-                    // Pulsante per Eliminare l'Anno
+                    // Pulsante per Eliminare l'Anno (definitivamente)
                     const deleteYearBtn = document.createElement('button');
                     deleteYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
                     deleteYearBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Anno';
                     deleteYearBtn.addEventListener('click', () => {
-                        deleteYearTimers(clientName, year, yearSection);
+                        permanentlyDeleteYearTimers(clientName, year, yearSection);
                     });
 
                     const yearHeaderActions = document.createElement('div');
@@ -230,9 +201,9 @@ function loadSavedTimers(filters = {}) {
 
                     // Div per il collapse dell'Anno
                     const yearCollapse = document.createElement('div');
-                    yearCollapse.id = `collapse-${yearId}`;
+                    yearCollapse.id = `recycle-collapse-${yearId}`;
                     yearCollapse.classList.add('collapse');
-                    yearCollapse.setAttribute('aria-labelledby', `heading-${yearId}`);
+                    yearCollapse.setAttribute('aria-labelledby', `recycle-heading-${yearId}`);
 
                     const yearBody = document.createElement('div');
                     yearBody.classList.add('card-body');
@@ -254,26 +225,26 @@ function loadSavedTimers(filters = {}) {
                         // Header per il Mese
                         const monthHeader = document.createElement('div');
                         monthHeader.classList.add('card-header');
-                        monthHeader.id = `heading-${monthId}`;
+                        monthHeader.id = `recycle-heading-${monthId}`;
 
                         const monthButton = document.createElement('button');
                         monthButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
                         monthButton.setAttribute('data-toggle', 'collapse');
-                        monthButton.setAttribute('data-target', `#collapse-${monthId}`);
+                        monthButton.setAttribute('data-target', `#recycle-collapse-${monthId}`);
                         monthButton.setAttribute('aria-expanded', 'false');
-                        monthButton.setAttribute('aria-controls', `collapse-${monthId}`);
+                        monthButton.setAttribute('aria-controls', `recycle-collapse-${monthId}`);
 
                         // Formatta il nome del mese
                         const monthName = getMonthName(parseInt(month));
 
                         monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
 
-                        // Pulsante per Eliminare il Mese
+                        // Pulsante per Eliminare il Mese (definitivamente)
                         const deleteMonthBtn = document.createElement('button');
                         deleteMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
                         deleteMonthBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Mese';
                         deleteMonthBtn.addEventListener('click', () => {
-                            deleteMonthTimers(clientName, year, month, monthSection);
+                            permanentlyDeleteMonthTimers(clientName, year, month, monthSection);
                         });
 
                         const monthHeaderActions = document.createElement('div');
@@ -288,9 +259,9 @@ function loadSavedTimers(filters = {}) {
 
                         // Div per il collapse del Mese
                         const monthCollapse = document.createElement('div');
-                        monthCollapse.id = `collapse-${monthId}`;
+                        monthCollapse.id = `recycle-collapse-${monthId}`;
                         monthCollapse.classList.add('collapse');
-                        monthCollapse.setAttribute('aria-labelledby', `heading-${monthId}`);
+                        monthCollapse.setAttribute('aria-labelledby', `recycle-heading-${monthId}`);
 
                         const monthBody = document.createElement('div');
                         monthBody.classList.add('card-body');
@@ -333,7 +304,7 @@ function loadSavedTimers(filters = {}) {
 
                         timers.forEach(timerObj => {
                             const logData = timerObj.data;
-                            const timerRow = createTimerRow(timerObj.id, logData);
+                            const timerRow = createTimerRow(timerObj.id, logData, true); // Passiamo true per indicare che siamo nel cestino
                             tbody.appendChild(timerRow);
                         });
 
@@ -355,11 +326,11 @@ function loadSavedTimers(filters = {}) {
                         });
 
                         // Eventi per cambiare l'icona al clic sul mese
-                        $(`#collapse-${monthId}`).on('show.bs.collapse', function () {
+                        $(`#recycle-collapse-${monthId}`).on('show.bs.collapse', function () {
                             monthButton.classList.remove('collapsed');
                             monthButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${monthName}`;
                         });
-                        $(`#collapse-${monthId}`).on('hide.bs.collapse', function () {
+                        $(`#recycle-collapse-${monthId}`).on('hide.bs.collapse', function () {
                             monthButton.classList.add('collapsed');
                             monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
                         });
@@ -379,11 +350,11 @@ function loadSavedTimers(filters = {}) {
                     });
 
                     // Eventi per cambiare l'icona al clic sull'anno
-                    $(`#collapse-${yearId}`).on('show.bs.collapse', function () {
+                    $(`#recycle-collapse-${yearId}`).on('show.bs.collapse', function () {
                         yearButton.classList.remove('collapsed');
                         yearButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${year}`;
                     });
-                    $(`#collapse-${yearId}`).on('hide.bs.collapse', function () {
+                    $(`#recycle-collapse-${yearId}`).on('hide.bs.collapse', function () {
                         yearButton.classList.add('collapsed');
                         yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
                     });
@@ -395,7 +366,7 @@ function loadSavedTimers(filters = {}) {
                 clientSection.appendChild(clientCollapse);
 
                 // Aggiungi il cliente alla lista principale
-                savedTimersList.appendChild(clientSection);
+                recycleBinList.appendChild(clientSection);
 
                 // Inizializza la sezione collassabile del cliente
                 $(clientCollapse).collapse({
@@ -403,96 +374,143 @@ function loadSavedTimers(filters = {}) {
                 });
 
                 // Eventi per cambiare l'icona al clic sul cliente
-                $(`#collapse-${clientId}`).on('show.bs.collapse', function () {
+                $(`#recycle-collapse-${clientId}`).on('show.bs.collapse', function () {
                     clientButton.classList.remove('collapsed');
                     clientButton.innerHTML = `<i class="fas fa-chevron-up mr-2"></i>${clientName}`;
                 });
-                $(`#collapse-${clientId}`).on('hide.bs.collapse', function () {
+                $(`#recycle-collapse-${clientId}`).on('hide.bs.collapse', function () {
                     clientButton.classList.add('collapsed');
                     clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
                 });
             }
         })
         .catch(error => {
-            console.error('Errore nel caricamento dei timer salvati:', error);
+            console.error('Errore nel caricamento del cestino:', error);
         });
 }
 
-// Funzione per caricare i clienti nel menu a tendina
-function loadClientsForFilter() {
-    const clientSelect = document.getElementById('filter-client');
-    clientSelect.innerHTML = '<option value="">Tutti i Clienti</option>';
-
-    db.collection('clients')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const client = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = client.name;
-                clientSelect.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Errore nel caricamento dei clienti per il filtro:', error);
-        });
-}
-
-// Funzione per rimuovere il contrassegno "reportato" dai timer
-function unmarkTimers(timerIds) {
-    const batch = db.batch();
-    timerIds.forEach(timerId => {
-        const timerRef = db.collection('timeLogs').doc(timerId);
-        batch.update(timerRef, { isReported: false });
-    });
-    batch.commit().then(() => {
-        lastOperation = {
-            action: 'unmark',
-            timerIds: timerIds
-        };
+// Funzione per ripristinare un timer dal cestino
+function restoreTimer(timerId, rowElement) {
+    db.collection('timeLogs').doc(timerId).update({
+        isDeleted: false,
+        deletedAt: firebase.firestore.FieldValue.delete()
+    }).then(() => {
+        rowElement.remove();
         Swal.fire({
             icon: 'success',
-            title: 'Contrassegno Rimosso',
-            text: 'Il contrassegno è stato rimosso con successo dai timer selezionati.',
+            title: 'Timer Ripristinato',
+            text: 'Il timer è stato ripristinato con successo.',
             confirmButtonText: 'OK'
         });
-        // Ricarica i timer salvati con gli stessi filtri
-        const filters = getCurrentFilters();
-        loadSavedTimers(filters);
     }).catch(error => {
-        console.error('Errore nella rimozione del contrassegno:', error);
+        console.error('Errore durante il ripristino del timer:', error);
         Swal.fire({
             icon: 'error',
             title: 'Errore',
-            text: 'Si è verificato un errore durante la rimozione del contrassegno.',
+            text: 'Si è verificato un errore durante il ripristino del timer.',
             confirmButtonText: 'OK'
         });
     });
 }
 
-// Funzione per annullare la rimozione del contrassegno
-function undoUnmarkTimers(timerIds) {
-    const batch = db.batch();
-    timerIds.forEach(timerId => {
-        const timerRef = db.collection('timeLogs').doc(timerId);
-        batch.update(timerRef, { isReported: true });
+// Funzione per eliminare definitivamente un timer
+function permanentlyDeleteTimer(timerId, rowElement) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: 'Questo timer sarà eliminato definitivamente e non potrà essere recuperato.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina definitivamente!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            db.collection('timeLogs').doc(timerId).delete()
+                .then(() => {
+                    rowElement.remove();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Timer Eliminato',
+                        text: 'Il timer è stato eliminato definitivamente.',
+                        confirmButtonText: 'OK'
+                    });
+                })
+                .catch(error => {
+                    console.error('Errore durante l\'eliminazione del timer:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante l\'eliminazione del timer.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
     });
-    batch.commit().then(() => {
+}
+
+// Funzione per "eliminare" un timer salvato (spostandolo nel cestino)
+function deleteTimer(timerId, barElement) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: 'Vuoi eliminare questo timer? Sarà spostato nel cestino.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const timerRef = db.collection('timeLogs').doc(timerId);
+            timerRef.update({
+                isDeleted: true,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+                .then(() => {
+                    barElement.remove();
+                    lastOperation = {
+                        action: 'delete',
+                        timerId: timerId
+                    };
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Timer Eliminato',
+                        text: 'Il timer è stato spostato nel cestino.',
+                        confirmButtonText: 'OK'
+                    });
+                })
+                .catch(error => {
+                    console.error('Errore durante l\'eliminazione del timer:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante l\'eliminazione del timer.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+    });
+}
+
+// Funzione per annullare l'eliminazione di un timer
+function undoDeleteTimer(timerId) {
+    db.collection('timeLogs').doc(timerId).update({
+        isDeleted: false,
+        deletedAt: firebase.firestore.FieldValue.delete()
+    }).then(() => {
         lastOperation = null; // Resetta l'ultima operazione
         Swal.fire({
             icon: 'success',
             title: 'Operazione Annullata',
-            text: 'Il contrassegno è stato ripristinato per i timer selezionati.',
+            text: 'Il timer è stato ripristinato.',
             confirmButtonText: 'OK'
         });
-        // Ricarica i timer salvati con gli stessi filtri
+        // Ricarica la lista dei timer
         const filters = getCurrentFilters();
         loadSavedTimers(filters);
     }).catch(error => {
-        console.error('Errore durante l\'annullamento della rimozione del contrassegno:', error);
+        console.error('Errore durante l\'annullamento dell\'eliminazione del timer:', error);
         Swal.fire({
             icon: 'error',
             title: 'Errore',

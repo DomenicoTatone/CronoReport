@@ -35,6 +35,7 @@ function initializeReportHistoryEvents() {
 
         db.collection('reports')
             .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false)
             .orderBy('timestamp', 'desc')
             .get()
             .then(snapshot => {
@@ -157,13 +158,13 @@ function initializeReportHistoryEvents() {
                                 const deleteButton = document.createElement('button');
                                 deleteButton.classList.add('btn', 'btn-sm', 'p-1');
                                 deleteButton.innerHTML = '<i class="fas fa-trash-alt"></i>';
-
+                                
                                 // Evento per eliminare il report
                                 deleteButton.addEventListener('click', (e) => {
                                     e.stopPropagation();
                                     Swal.fire({
                                         title: 'Sei sicuro?',
-                                        text: 'Vuoi eliminare questo report?',
+                                        text: 'Vuoi eliminare questo report? Sarà spostato nel cestino.',
                                         icon: 'warning',
                                         showCancelButton: true,
                                         confirmButtonColor: '#d33',
@@ -172,12 +173,15 @@ function initializeReportHistoryEvents() {
                                         cancelButtonText: 'Annulla'
                                     }).then((result) => {
                                         if (result.isConfirmed) {
-                                            db.collection('reports').doc(reportId).delete()
+                                            db.collection('reports').doc(reportId).update({
+                                                isDeleted: true,
+                                                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                            })
                                                 .then(() => {
                                                     Swal.fire({
                                                         icon: 'success',
                                                         title: 'Eliminato!',
-                                                        text: 'Il report è stato eliminato.',
+                                                        text: 'Il report è stato spostato nel cestino.',
                                                         confirmButtonText: 'OK'
                                                     });
                                                     loadReportHistory();
@@ -194,7 +198,7 @@ function initializeReportHistoryEvents() {
                                         }
                                     });
                                 });
-
+                                
                                 const reportHeaderActions = document.createElement('div');
                                 reportHeaderActions.appendChild(deleteButton);
 
