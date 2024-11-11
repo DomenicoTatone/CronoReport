@@ -107,18 +107,6 @@ function initializeSavedTimersEvents() {
         });
     }
 
-    // Inizializza il client delle API di Google
-    initializeGoogleApiClient().then(() => {
-        // Abilita i pulsanti di esportazione
-        if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
-        if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-    }).catch(error => {
-        console.error('Errore durante l\'inizializzazione del client Google API:', error);
-        // Disabilita i pulsanti di esportazione in caso di errore
-        if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
-        if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
-    });
-
     // Carica tutti i timer salvati inizialmente
     loadSavedTimers();
 }
@@ -152,19 +140,6 @@ function filterDisplayedTimers(searchTerm) {
     }
 }
 
-// Funzione per inizializzare il client delle API di Google
-function initializeGoogleApiClient() {
-    return new Promise((resolve, reject) => {
-        gapi.load('client', () => {
-            if (gapi.auth2) {
-                resolve();
-            } else {
-                reject('gapi.auth2 non è disponibile.');
-            }
-        });
-    });
-}
-
 // Funzione per esportare i timer in Google Docs
 function exportTimersToGoogleDoc() {
     if (displayedTimers.length === 0) {
@@ -177,6 +152,12 @@ function exportTimersToGoogleDoc() {
         return;
     }
 
+    handleAuthClick(() => {
+        proceedWithExportToGoogleDoc();
+    });
+}
+
+function proceedWithExportToGoogleDoc() {
     // Genera il contenuto del report
     const reportContent = generateTimersReportContent(displayedTimers);
 
@@ -198,6 +179,12 @@ function exportTimersToGoogleSheet() {
         return;
     }
 
+    handleAuthClick(() => {
+        proceedWithExportToGoogleSheet();
+    });
+}
+
+function proceedWithExportToGoogleSheet() {
     // Genera l'array di valori
     const reportValues = generateTimersReportValues(displayedTimers);
 
@@ -261,14 +248,8 @@ function generateTimersReportValues(timers) {
 
 // Funzioni per creare il documento Google Docs
 function createGoogleDoc(reportContent, fileName) {
-    const doc = {
+    gapi.client.docs.documents.create({
         title: fileName
-    };
-
-    gapi.client.request({
-        path: 'https://docs.googleapis.com/v1/documents',
-        method: 'POST',
-        body: doc
     }).then((response) => {
         const documentId = response.result.documentId;
 
@@ -292,12 +273,9 @@ function insertContentIntoDoc(documentId, reportContent) {
         }
     });
 
-    gapi.client.request({
-        path: `https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`,
-        method: 'POST',
-        body: {
-            requests: requests
-        }
+    gapi.client.docs.documents.batchUpdate({
+        documentId: documentId,
+        requests: requests
     }).then((response) => {
         console.log('Contenuto inserito nel documento:', response);
         // Apri il documento in una nuova scheda
@@ -309,26 +287,13 @@ function insertContentIntoDoc(documentId, reportContent) {
 
 // Funzioni per creare il foglio Google Sheets
 function createGoogleSheet(reportValues, fileName) {
-    const spreadsheet = {
+    gapi.client.sheets.spreadsheets.create({
         properties: {
             title: fileName
-        },
-        sheets: [
-            {
-                properties: {
-                    title: 'Timer'
-                }
-            }
-        ]
-    };
-
-    gapi.client.request({
-        path: 'https://sheets.googleapis.com/v4/spreadsheets',
-        method: 'POST',
-        body: spreadsheet
+        }
     }).then((response) => {
         const spreadsheetId = response.result.spreadsheetId;
-        const sheetName = 'Timer';
+        const sheetName = response.result.sheets[0].properties.title;
 
         // Inserisci i dati nel foglio
         insertDataIntoSheet(spreadsheetId, sheetName, reportValues);
@@ -338,17 +303,13 @@ function createGoogleSheet(reportValues, fileName) {
 }
 
 function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
-    const range = `${encodeURIComponent(sheetName)}!A1`;
+    const range = `${sheetName}!A1`;
 
-    gapi.client.request({
-        path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append`,
-        method: 'POST',
-        params: {
-            valueInputOption: 'RAW'
-        },
-        body: {
-            values: reportValues
-        }
+    gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: range,
+        valueInputOption: 'RAW',
+        values: reportValues
     }).then((response) => {
         console.log('Dati inseriti nel foglio di calcolo:', response);
         // Apri il foglio di calcolo in una nuova scheda
