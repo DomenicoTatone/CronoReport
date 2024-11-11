@@ -13,90 +13,82 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // Inserisci il tuo Client ID
-const CLIENT_ID = '1032884571304-3n339pg4e5tjpkmqjijmlm7j1fjr0rg8.apps.googleusercontent.com';
+const CLIENT_ID = '1032884571304-7t9shq2pb29o92qhthovhsj65l99l9t4.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyA1yoFNujcHvWFib5_J1dFiMSDzBMv-b4s';
 
 // Array degli URL dei documenti di scoperta per le API utilizzate
 const DISCOVERY_DOCS = [
-  'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
   'https://docs.googleapis.com/$discovery/rest?version=v1',
   'https://sheets.googleapis.com/$discovery/rest?version=v4'
 ];
 
-// Ambiti di autorizzazione richiesti
-const SCOPES = 'https://www.googleapis.com/auth/drive.file, https://www.googleapis.com/auth/documents, https://www.googleapis.com/auth/spreadsheets';
+const SCOPES = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/spreadsheets';
 
-let GoogleAuth;
+let tokenClient;
+let gapiInited = false;
+let gisInited = false;
 
-function handleClientLoad() {
-    gapi.load('client:auth2', initClient);
+// Funzione chiamata quando la libreria GAPI è caricata
+function gapiLoaded() {
+  gapi.load('client', initializeGapiClient);
 }
 
-function initClient() {
-    gapi.client.init({
-        discoveryDocs: DISCOVERY_DOCS,
-        clientId: CLIENT_ID,
-        scope: SCOPES
-    }).then(() => {
-        GoogleAuth = gapi.auth2.getAuthInstance();
-
-        // Aggiorna lo stato di accesso
-        updateSigninStatus(GoogleAuth.isSignedIn.get());
-
-        // Ascolta i cambiamenti nello stato di accesso
-        GoogleAuth.isSignedIn.listen(updateSigninStatus);
-
-        // Event listeners per i pulsanti di accesso e disconnessione
-        const googleSignInBtn = document.getElementById('google-signin-btn');
-        const googleSignOutBtn = document.getElementById('google-signout-btn');
-
-        if (googleSignInBtn) {
-            googleSignInBtn.addEventListener('click', handleSignInClick);
-        }
-
-        if (googleSignOutBtn) {
-            googleSignOutBtn.addEventListener('click', handleSignOutClick);
-        }
-    }, (error) => {
-        console.error('Errore durante l\'inizializzazione del client Google API:', error);
-    });
+// Funzione per inizializzare il client GAPI
+async function initializeGapiClient() {
+  await gapi.client.init({
+      apiKey: API_KEY,
+      discoveryDocs: DISCOVERY_DOCS,
+  });
+  gapiInited = true;
+  maybeEnableButtons();
 }
 
-function updateSigninStatus(isSignedIn) {
-  const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
-  const exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
-  const googleSignInBtn = document.getElementById('google-signin-btn');
-  const googleSignOutBtn = document.getElementById('google-signout-btn');
+// Funzione chiamata quando la libreria GIS è caricata
+function gisLoaded() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: '', // Sarà assegnato in fase di esecuzione
+  });
+  gisInited = true;
+  maybeEnableButtons();
+}
 
-  if (isSignedIn) {
-      // L'utente è autenticato
-      // Abilita i pulsanti di esportazione
+// Funzione per abilitare i pulsanti dopo l'inizializzazione
+function maybeEnableButtons() {
+  if (gapiInited && gisInited) {
+      const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
+      const exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
       if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
       if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-
-      // Mostra il pulsante di disconnessione
-      if (googleSignInBtn) googleSignInBtn.style.display = 'none';
-      if (googleSignOutBtn) googleSignOutBtn.style.display = 'inline-block';
-  } else {
-      // L'utente non è autenticato
-      // Disabilita i pulsanti di esportazione
-      if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
-      if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
-
-      // Mostra il pulsante di accesso
-      if (googleSignInBtn) googleSignInBtn.style.display = 'inline-block';
-      if (googleSignOutBtn) googleSignOutBtn.style.display = 'none';
   }
 }
 
-function handleSignInClick(event) {
-  GoogleAuth.signIn();
+// Funzione per gestire l'autenticazione e l'autorizzazione
+function handleAuthClick(callback) {
+  tokenClient.callback = callback;
+  if (!gapi.client.getToken()) {
+      // Se non è autenticato, avvia il flusso OAuth 2.0 con prompt di consenso
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+  } else {
+      // Se è già autenticato, richiedi un nuovo token senza prompt
+      tokenClient.requestAccessToken({ prompt: '' });
+  }
 }
 
-function handleSignOutClick(event) {
-  GoogleAuth.signOut();
+// Funzione per gestire la disconnessione
+function handleSignOutClick() {
+  const token = gapi.client.getToken();
+  if (token) {
+      google.accounts.oauth2.revoke(token.access_token);
+      gapi.client.setToken('');
+  }
 }
 
 // Inizializza il client quando la pagina è caricata
-document.addEventListener('DOMContentLoaded', () => {
-  handleClientLoad();
+window.addEventListener('load', () => {
+  // Carica la libreria GAPI
+  gapiLoaded();
+  // Carica la libreria GIS
+  gisLoaded();
 });
