@@ -17,6 +17,23 @@ function initializeSavedTimersEvents() {
     const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
     const exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
 
+    // Disabilita i pulsanti di esportazione inizialmente
+    if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
+    if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
+
+    // Verifica se il client delle Google API è già inizializzato
+    if (gapiInited && gisInited) {
+        // Abilita i pulsanti di esportazione
+        if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
+        if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
+    } else {
+        // Aggiungi un listener per abilitare i pulsanti una volta che il client è pronto
+        document.addEventListener('google-api-initialized', () => {
+            if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
+            if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
+        });
+    }
+
     if (!savedTimersList) {
         console.error("Elemento 'savedTimersAccordion' non trovato nel DOM.");
         return;

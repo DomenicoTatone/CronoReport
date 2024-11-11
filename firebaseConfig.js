@@ -40,6 +40,9 @@ async function initializeGapiClient() {
   });
   gapiInited = true;
   maybeEnableButtons();
+
+  // Dispatch an event to notify that the Google API client is initialized
+  document.dispatchEvent(new Event('google-api-initialized'));
 }
 
 // Funzione chiamata quando la libreria GIS è caricata
@@ -51,16 +54,6 @@ function gisLoaded() {
   });
   gisInited = true;
   maybeEnableButtons();
-}
-
-// Funzione per abilitare i pulsanti dopo l'inizializzazione
-function maybeEnableButtons() {
-  if (gapiInited && gisInited) {
-      const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
-      const exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
-      if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
-      if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-  }
 }
 
 // Funzione per gestire l'autenticazione e l'autorizzazione
@@ -88,5 +81,47 @@ function handleSignOutClick() {
   if (token) {
       google.accounts.oauth2.revoke(token.access_token);
       gapi.client.setToken('');
+  }
+}
+
+function initializeGoogleApiClient(accessToken) {
+  return new Promise((resolve, reject) => {
+      gapi.load('client', () => {
+          gapi.client.init({
+              discoveryDocs: [
+                  'https://docs.googleapis.com/$discovery/rest?version=v1',
+                  'https://sheets.googleapis.com/$discovery/rest?version=v4'
+              ]
+          }).then(() => {
+              // Imposta il token di accesso per le richieste
+              gapi.client.setToken({
+                  access_token: accessToken
+              });
+              resolve();
+          }, (error) => {
+              reject(error);
+          });
+      });
+  });
+}
+
+function handleClientLoad() {
+  const accessToken = localStorage.getItem('googleAccessToken');
+  if (accessToken) {
+      initializeGoogleApiClient(accessToken).then(() => {
+          maybeEnableButtons();
+      }).catch(error => {
+          console.error('Errore durante l\'inizializzazione del client Google API:', error);
+      });
+  }
+}
+
+// Modifica maybeEnableButtons per essere accessibile globalmente e verificare se i pulsanti esistono
+function maybeEnableButtons() {
+  if (gapiInited && gisInited) {
+      const exportGoogleDocBtns = document.querySelectorAll('.export-google-doc-btn');
+      const exportGoogleSheetBtns = document.querySelectorAll('.export-google-sheet-btn');
+      exportGoogleDocBtns.forEach(btn => btn.disabled = false);
+      exportGoogleSheetBtns.forEach(btn => btn.disabled = false);
   }
 }

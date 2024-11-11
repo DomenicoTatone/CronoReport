@@ -8,68 +8,6 @@ let companyLogoInput;
 let exportGoogleDocBtn;
 let exportGoogleSheetBtn;
 
-// Definisci la funzione handleClientLoad
-function handleClientLoad() {
-    // Ora puoi inizializzare il client delle API di Google
-    const accessToken = localStorage.getItem('googleAccessToken');
-
-    if (accessToken) {
-        initializeGoogleApiClient(accessToken).then(() => {
-            // Abilita i pulsanti di esportazione
-            if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
-            if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
-        }).catch(error => {
-            console.error('Errore durante l\'inizializzazione del client Google API:', error);
-            // Disabilita i pulsanti di esportazione in caso di errore
-            if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
-            if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
-        });
-    } else {
-        // Disabilita i pulsanti di esportazione se non c'è il token di accesso
-        if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
-        if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
-    }
-}
-
-// Definisci la funzione initializeGoogleApiClient
-function initializeGoogleApiClient(accessToken) {
-    return new Promise((resolve, reject) => {
-        gapi.load('client', () => {
-            gapi.client.init({
-                discoveryDocs: [
-                    'https://docs.googleapis.com/$discovery/rest?version=v1',
-                    'https://sheets.googleapis.com/$discovery/rest?version=v4'
-                ]
-            }).then(() => {
-                // Imposta il token di accesso per le richieste
-                gapi.client.setToken({
-                    access_token: accessToken
-                });
-                resolve();
-            }, (error) => {
-                reject(error);
-            });
-        });
-    });
-}
-
-// Inserisci il codice per caricare il client delle API di Google qui
-function loadGoogleApiClient() {
-    gapi.load('client', () => {
-        handleClientLoad();
-    });
-}
-
-// Verifica che gapi sia disponibile e poi chiama loadGoogleApiClient
-if (typeof gapi !== 'undefined') {
-    loadGoogleApiClient();
-} else {
-    // Se gapi non è ancora disponibile, aggiungi un listener per quando sarà pronto
-    window.addEventListener('load', () => {
-        loadGoogleApiClient();
-    });
-}
-
 // Funzione per inizializzare gli eventi della sezione Report
 function initializeReportEvents() {
     // Controlla se currentUser è disponibile
