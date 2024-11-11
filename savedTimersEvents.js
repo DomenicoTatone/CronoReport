@@ -325,10 +325,12 @@ function filterDisplayedTimers(searchTerm) {
         const filters = getCurrentFilters();
         loadSavedTimers(filters);
     } else {
+        // Converti il termine di ricerca in minuscolo per un confronto case-insensitive
+        const searchLower = searchTerm.toLowerCase();
+
         // Filtra displayedTimers in base al termine di ricerca
         const filteredTimers = displayedTimers.filter(timerObj => {
             const logData = timerObj.data;
-            const searchLower = searchTerm.toLowerCase();
 
             // Controlla se uno dei campi contiene il termine di ricerca
             return (
@@ -341,8 +343,30 @@ function filterDisplayedTimers(searchTerm) {
             );
         });
 
+        // Calcola gli importi non riscossi per i timer filtrati
+        const unreportedAmounts = {};
+        filteredTimers.forEach(timerObj => {
+            const logData = timerObj.data;
+            const clientName = logData.clientName || 'Cliente Sconosciuto';
+            const worktypeId = logData.worktypeId;
+
+            if (!logData.isReported) {
+                const durationInHours = logData.duration / 3600;
+                const hourlyRate = worktypeRates[worktypeId] || 0;
+                const amount = durationInHours * hourlyRate;
+
+                if (!unreportedAmounts[clientName]) {
+                    unreportedAmounts[clientName] = 0;
+                }
+                unreportedAmounts[clientName] += amount;
+            }
+        });
+
         // Mostra i timer filtrati
         displayTimers(filteredTimers);
+
+        // Visualizza gli importi non riscossi
+        displayUnreportedAmounts(unreportedAmounts);
     }
 }
 

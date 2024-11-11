@@ -361,6 +361,17 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
     const siteName = siteSelect.options[siteSelect.selectedIndex].text;
     const worktypeName = worktypeSelect.options[worktypeSelect.selectedIndex].text;
 
+    // Recupera `hourlyRate` dal `worktype`
+    let hourlyRate = 0;
+    try {
+        const worktypeDoc = await db.collection('worktypes').doc(worktypeId).get();
+        if (worktypeDoc.exists) {
+            hourlyRate = worktypeDoc.data().hourlyRate || 0;
+        }
+    } catch (error) {
+        console.error('Errore nel recuperare la tariffa oraria del tipo di lavoro:', error);
+    }
+    
     // Parse delle date inserite utilizzando la nuova funzione
     const manualStartTime = manualStartTimeValue ? parseLocalDateTime(manualStartTimeValue) : null;
     const manualEndTime = manualEndTimeValue ? parseLocalDateTime(manualEndTimeValue) : null;

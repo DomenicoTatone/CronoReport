@@ -6,6 +6,12 @@ function loadSavedTimers(filters = {}) {
     const savedTimersList = document.getElementById('savedTimersAccordion');
     savedTimersList.innerHTML = '';
 
+    // Svuota la sezione degli importi non riscossi
+    const amountsSection = document.getElementById('unreported-amounts-section');
+    if (amountsSection) {
+        amountsSection.remove();
+    }
+
     // Definizione della query per ottenere i timer dal database
     let query = db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
@@ -28,6 +34,7 @@ function loadSavedTimers(filters = {}) {
     query.orderBy('startTime', 'desc').get()
         .then(snapshot => {
             displayedTimers = []; // Reset della lista dei timer visualizzati
+            const unreportedAmounts = {}; // Per calcolare gli importi non riscossi per cliente
 
             if (snapshot.empty) {
                 const noTimersMessage = document.createElement('p');
@@ -36,22 +43,126 @@ function loadSavedTimers(filters = {}) {
                 return;
             }
 
-            snapshot.forEach(doc => {
-                const logData = doc.data();
+            const worktypeRates = {}; // Memorizza le tariffe orarie per i tipi di lavoro
 
-                // Aggiungi il timer all'array dei timer visualizzati
-                displayedTimers.push({
-                    id: doc.id,
-                    data: logData
+            // Prima, carica tutte le tariffe orarie dei tipi di lavoro
+            db.collection('worktypes')
+                .where('uid', '==', currentUser.uid)
+                .get()
+                .then(worktypeSnapshot => {
+                    worktypeSnapshot.forEach(worktypeDoc => {
+                        const worktypeData = worktypeDoc.data();
+                        worktypeRates[worktypeDoc.id] = worktypeData.hourlyRate || 0;
+                    });
+
+                    snapshot.forEach(doc => {
+                        const logData = doc.data();
+                        const clientName = logData.clientName || 'Cliente Sconosciuto';
+                        const worktypeId = logData.worktypeId;
+
+                        // Aggiungi il timer all'array dei timer visualizzati
+                        displayedTimers.push({
+                            id: doc.id,
+                            data: logData
+                        });
+
+                        // Calcola l'importo se il timer non è reportato
+                        if (!logData.isReported) {
+                            const durationInHours = logData.duration / 3600; // Converti la durata in ore
+                            const hourlyRate = worktypeRates[worktypeId] || 0;
+                            const amount = durationInHours * hourlyRate;
+
+                            if (!unreportedAmounts[clientName]) {
+                                unreportedAmounts[clientName] = 0;
+                            }
+                            unreportedAmounts[clientName] += amount;
+                        }
+                    });
+
+                    // Chiamata alla funzione displayTimers con displayedTimers
+                    displayTimers(displayedTimers);
+
+                    // Visualizza gli importi non riscossi
+                    displayUnreportedAmounts(unreportedAmounts);
+                })
+                .catch(error => {
+                    console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);
                 });
-            });
-
-            // Chiamata alla funzione displayTimers con displayedTimers
-            displayTimers(displayedTimers);
         })
         .catch(error => {
             console.error('Errore nel caricamento dei timer salvati:', error);
         });
+}
+
+function displayUnreportedAmounts(unreportedAmounts) {
+    const amountsSection = document.getElementById('unreported-amounts-section');
+    if (!amountsSection) {
+        // Sezione non esiste, creala
+        const savedTimersSection = document.getElementById('saved-timers-section');
+        const newSection = document.createElement('div');
+        newSection.id = 'unreported-amounts-section';
+        newSection.classList.add('card', 'mb-4', 'shadow-sm');
+
+        const header = document.createElement('div');
+        header.classList.add('card-header', 'bg-info', 'text-white');
+        header.innerHTML = '<h5 class="mb-0"><i class="fas fa-money-bill-wave mr-2"></i>Importi Non Riscossi per Cliente</h5>';
+
+        const body = document.createElement('div');
+        body.classList.add('card-body');
+        body.id = 'unreported-amounts-body';
+
+        newSection.appendChild(header);
+        newSection.appendChild(body);
+
+        // Inserisci la nuova sezione dopo il titolo
+        savedTimersSection.insertBefore(newSection, savedTimersSection.childNodes[2]);
+    }
+
+    const body = document.getElementById('unreported-amounts-body');
+    body.innerHTML = ''; // Svuota il contenuto precedente
+
+    if (Object.keys(unreportedAmounts).length === 0) {
+        body.innerHTML = '<p>Non ci sono importi non riscossi.</p>';
+        return;
+    }
+
+    // Crea una tabella per visualizzare gli importi
+    const table = document.createElement('table');
+    table.classList.add('table', 'table-bordered', 'table-striped');
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+
+    const headers = ['Cliente', 'Importo Non Riscosso'];
+    headers.forEach(text => {
+        const th = document.createElement('th');
+        th.textContent = text;
+        headerRow.appendChild(th);
+    });
+
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+
+    for (const clientName in unreportedAmounts) {
+        const amount = unreportedAmounts[clientName];
+        const row = document.createElement('tr');
+
+        const clientCell = document.createElement('td');
+        clientCell.textContent = clientName;
+
+        const amountCell = document.createElement('td');
+        amountCell.textContent = amount.toFixed(2) + ' €';
+
+        row.appendChild(clientCell);
+        row.appendChild(amountCell);
+
+        tbody.appendChild(row);
+    }
+
+    table.appendChild(tbody);
+    body.appendChild(table);
 }
 
 // Funzione per visualizzare i timer

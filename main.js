@@ -86,32 +86,35 @@ const dataManagementTemplate = `
             </div>
         </div>
 
-        <!-- Gestione Tipi di Lavoro -->
-        <div class="col-md-6">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0"><i class="fas fa-tools mr-2"></i>Gestione Tipi di Lavoro</h5>
-                </div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label for="select-client-for-worktype" class="font-weight-bold">Seleziona Cliente:</label>
-                        <select id="select-client-for-worktype" class="form-control">
-                            <option value="">--Seleziona Cliente--</option>
-                            <!-- Le opzioni saranno popolate dinamicamente -->
-                        </select>
-                    </div>
-                    <div class="input-group mb-3">
-                        <input type="text" id="new-worktype-name" class="form-control" placeholder="Tipo di Lavoro">
-                        <div class="input-group-append">
-                            <button id="add-worktype-btn" class="btn btn-success"><i class="fas fa-plus"></i> Aggiungi Tipo di Lavoro</button>
-                        </div>
-                    </div>
-                    <ul id="worktype-list" class="list-group">
-                        <!-- Tipi di Lavoro saranno popolati dinamicamente -->
-                    </ul>
-                </div>
-            </div>
+<!-- Gestione Tipi di Lavoro -->
+<div class="col-md-6">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0"><i class="fas fa-tools mr-2"></i>Gestione Tipi di Lavoro</h5>
         </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="select-client-for-worktype" class="font-weight-bold">Seleziona Cliente:</label>
+                <select id="select-client-for-worktype" class="form-control">
+                    <option value="">--Seleziona Cliente--</option>
+                    <!-- Le opzioni saranno popolate dinamicamente -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="new-worktype-name" class="font-weight-bold">Tipo di Lavoro:</label>
+                <input type="text" id="new-worktype-name" class="form-control" placeholder="Tipo di Lavoro">
+            </div>
+            <div class="form-group">
+                <label for="new-worktype-hourly-rate" class="font-weight-bold">Tariffa Oraria (€):</label>
+                <input type="number" id="new-worktype-hourly-rate" class="form-control" placeholder="Es: 50">
+            </div>
+            <button id="add-worktype-btn" class="btn btn-success btn-block"><i class="fas fa-plus"></i> Aggiungi Tipo di Lavoro</button>
+            <ul id="worktype-list" class="list-group mt-3">
+                <!-- Tipi di Lavoro saranno popolati dinamicamente -->
+            </ul>
+        </div>
+    </div>
+</div>
     </div>
 </div>
 `;
@@ -230,23 +233,25 @@ function initializeDataManagementEvents() {
             showAlert('warning', 'Attenzione', 'Inserisci un nome valido per il sito.');
         }
     });
-
+    
     // Aggiungi Tipo di Lavoro
     addWorktypeBtn.addEventListener('click', () => {
         const worktypeName = newWorktypeName.value.trim();
         const clientId = selectClientForWorktype.value;
-
+        const hourlyRate = parseFloat(document.getElementById('new-worktype-hourly-rate').value);
+    
         if (!clientId) {
             showAlert('warning', 'Attenzione', 'Seleziona un Cliente prima di aggiungere un Tipo di Lavoro.');
             return;
         }
-
-        if (worktypeName) {
-            addWorktype(clientId, worktypeName);
+    
+        if (worktypeName && !isNaN(hourlyRate)) {
+            addWorktype(clientId, worktypeName, hourlyRate);
         } else {
-            showAlert('warning', 'Attenzione', 'Inserisci un nome valido per il tipo di lavoro.');
+            showAlert('warning', 'Attenzione', 'Inserisci un nome valido e una tariffa oraria valida per il tipo di lavoro.');
         }
     });
+    
 }
 
 /**
@@ -312,17 +317,20 @@ async function addSite(clientId, name) {
  * Funzione per aggiungere un nuovo tipo di lavoro
  * @param {string} clientId - ID del cliente associato
  * @param {string} name - Nome del tipo di lavoro
+ * @param {number} hourlyRate - Tariffa oraria per il tipo di lavoro
  */
-async function addWorktype(clientId, name) {
+async function addWorktype(clientId, name, hourlyRate) {
     try {
         await db.collection('worktypes').add({
             name: name,
             uid: currentUser.uid,
             clientId: clientId,
+            hourlyRate: hourlyRate,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         showAlert('success', 'Tipo di Lavoro aggiunto!', `Il tipo di lavoro "${name}" è stato aggiunto con successo.`);
         document.getElementById('new-worktype-name').value = '';
+        document.getElementById('new-worktype-hourly-rate').value = ''; // Resetta il campo hourlyRate
         loadWorktypes();
     } catch (error) {
         console.error('Errore nell\'aggiunta del tipo di lavoro:', error);
@@ -587,12 +595,13 @@ function loadWorktypes(selectElement = null, clientId = null) {
                 snapshot.forEach(doc => {
                     const li = document.createElement('li');
                     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-
+    
                     const nameSpan = document.createElement('span');
-                    nameSpan.textContent = doc.data().name;
+                    const worktypeData = doc.data();
+                    nameSpan.textContent = `${worktypeData.name} (Tariffa Oraria: ${worktypeData.hourlyRate || 0} €)`;
                     nameSpan.classList.add('flex-grow-1');
-
-                    const clientId = doc.data().clientId;
+    
+                    const clientId = worktypeData.clientId;
                     let clientName = 'Senza Cliente';
                     if (clientId) {
                         // Recupera il nome del Cliente associato
@@ -600,22 +609,22 @@ function loadWorktypes(selectElement = null, clientId = null) {
                             .then(clientDoc => {
                                 if (clientDoc.exists) {
                                     clientName = clientDoc.data().name;
-                                    nameSpan.textContent += ` (${clientName})`;
+                                    nameSpan.textContent += ` - Cliente: ${clientName}`;
                                 }
                             })
                             .catch(error => {
                                 console.error('Errore nel recuperare il nome del Cliente:', error);
                             });
                     }
-
+    
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
                     deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
-
+    
                     deleteBtn.addEventListener('click', () => {
                         Swal.fire({
                             title: 'Sei sicuro?',
-                            text: `Vuoi eliminare il tipo di lavoro "${doc.data().name}"?`,
+                            text: `Vuoi eliminare il tipo di lavoro "${worktypeData.name}"?`,
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonColor: '#d33',
@@ -640,7 +649,7 @@ function loadWorktypes(selectElement = null, clientId = null) {
                             }
                         });
                     });
-
+    
                     li.appendChild(nameSpan);
                     li.appendChild(deleteBtn);
                     worktypeList.appendChild(li);
