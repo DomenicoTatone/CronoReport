@@ -134,3 +134,7 @@ body {
 .recycle-card-header i {
     margin-right: 10px;
 }
+
+.table-warning {
+    background-color: #fff3cd;
+}

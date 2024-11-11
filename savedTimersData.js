@@ -94,6 +94,10 @@ function loadSavedTimers(filters = {}) {
         });
 }
 
+function generateSafeId(prefix, name) {
+    return prefix + '-' + name.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
 function displayUnreportedAmounts(unreportedAmounts) {
     const amountsSection = document.getElementById('unreported-amounts-section');
     if (!amountsSection) {
@@ -133,7 +137,7 @@ function displayUnreportedAmounts(unreportedAmounts) {
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
 
-    const headers = ['Cliente', 'Importo Non Riscosso'];
+    const headers = ['Cliente', 'Importo Non Riscosso', 'Promemoria', 'Azioni'];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -155,14 +159,200 @@ function displayUnreportedAmounts(unreportedAmounts) {
         const amountCell = document.createElement('td');
         amountCell.textContent = amount.toFixed(2) + ' €';
 
+        // Cell per il promemoria
+        const reminderCell = document.createElement('td');
+        reminderCell.id = generateSafeId('reminder-cell', clientName);
+
+        // Carica le impostazioni di promemoria per il cliente
+        loadReminderSettings(clientName, reminderCell, amount);
+
+        // Cell per le azioni
+        const actionCell = document.createElement('td');
+
+        const setReminderBtn = document.createElement('button');
+        setReminderBtn.classList.add('btn', 'btn-sm', 'btn-primary');
+        setReminderBtn.textContent = 'Imposta Promemoria';
+        setReminderBtn.addEventListener('click', () => {
+            showSetReminderModal(clientName, amount);
+        });
+
+        actionCell.appendChild(setReminderBtn);
+
         row.appendChild(clientCell);
         row.appendChild(amountCell);
+        row.appendChild(reminderCell);
+        row.appendChild(actionCell);
 
         tbody.appendChild(row);
     }
 
     table.appendChild(tbody);
     body.appendChild(table);
+}
+
+function saveReminderSettings(clientName, reminderAmount, reminderDate) {
+    // Controlla se esiste già un promemoria per questo cliente
+    db.collection('reminders')
+        .where('uid', '==', currentUser.uid)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            if (!snapshot.empty) {
+                // Aggiorna il documento esistente
+                const docId = snapshot.docs[0].id;
+                db.collection('reminders').doc(docId).update({
+                    reminderAmount: reminderAmount,
+                    reminderDate: reminderDate,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    $('#setReminderModal').modal('hide');
+                    showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state aggiornate.');
+                    // Ricarica la sezione degli importi non riscossi
+                    loadSavedTimers(getCurrentFilters());
+                }).catch(error => {
+                    console.error('Errore nell\'aggiornamento del promemoria:', error);
+                    showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
+                });
+            } else {
+                // Crea un nuovo documento
+                db.collection('reminders').add({
+                    uid: currentUser.uid,
+                    clientName: clientName,
+                    reminderAmount: reminderAmount,
+                    reminderDate: reminderDate,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    $('#setReminderModal').modal('hide');
+                    showAlert('success', 'Promemoria Salvato', 'Le impostazioni di promemoria sono state salvate.');
+                    // Ricarica la sezione degli importi non riscossi
+                    loadSavedTimers(getCurrentFilters());
+                }).catch(error => {
+                    console.error('Errore nel salvataggio del promemoria:', error);
+                    showAlert('error', 'Errore', 'Si è verificato un errore durante il salvataggio del promemoria.');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Errore nel controllare il promemoria esistente:', error);
+        });
+}
+
+function loadReminderSettings(clientName, reminderCell, currentAmount) {
+    db.collection('reminders')
+        .where('uid', '==', currentUser.uid)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            if (!snapshot.empty) {
+                const reminderData = snapshot.docs[0].data();
+                let reminderText = '';
+
+                if (reminderData.reminderAmount) {
+                    reminderText += `Importo: ${reminderData.reminderAmount.toFixed(2)} €`;
+                }
+                if (reminderData.reminderDate) {
+                    if (reminderText) reminderText += ' | ';
+                    reminderText += `Data: ${formatDate(reminderData.reminderDate)}`;
+                }
+
+                reminderCell.textContent = reminderText;
+
+                // Controlla se il promemoria deve essere attivato
+                checkReminder(clientName, currentAmount, reminderData);
+            } else {
+                reminderCell.textContent = 'Nessun promemoria impostato';
+            }
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento delle impostazioni di promemoria:', error);
+        });
+}
+
+function checkReminder(clientName, currentAmount, reminderData) {
+    let shouldRemind = false;
+
+    // Controlla l'importo
+    if (reminderData.reminderAmount && currentAmount >= reminderData.reminderAmount) {
+        shouldRemind = true;
+    }
+
+    // Controlla la data
+    if (reminderData.reminderDate) {
+        const today = new Date();
+        const reminderDate = new Date(reminderData.reminderDate);
+        if (today >= reminderDate) {
+            shouldRemind = true;
+        }
+    }
+
+    if (shouldRemind) {
+        const reminderCellId = generateSafeId('reminder-cell', clientName);
+        const reminderCell = document.getElementById(reminderCellId);
+        if (!reminderCell) {
+            console.error(`Elemento con id "${reminderCellId}" non trovato.`);
+            return;
+        }
+        const reminderRow = reminderCell.parentElement;
+        if (reminderRow) {
+            reminderRow.classList.add('table-warning');
+        } else {
+            console.error('Impossibile trovare il parentElement di reminderCell.');
+        }
+
+        // Mostra una notifica all'utente
+        Swal.fire({
+            icon: 'info',
+            title: 'Promemoria',
+            text: `Il cliente "${clientName}" ha raggiunto le condizioni del promemoria.`,
+            confirmButtonText: 'OK'
+        });
+    }
+}
+
+function showSetReminderModal(clientName, currentAmount) {
+    // Imposta il nome del cliente nella modale
+    document.getElementById('modal-client-name').textContent = clientName;
+
+    // Reset dei campi
+    document.getElementById('reminder-amount').value = '';
+    document.getElementById('reminder-date').value = '';
+
+    // Carica le impostazioni esistenti, se presenti
+    db.collection('reminders')
+        .where('uid', '==', currentUser.uid)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            if (!snapshot.empty) {
+                const reminderData = snapshot.docs[0].data();
+                if (reminderData.reminderAmount) {
+                    document.getElementById('reminder-amount').value = reminderData.reminderAmount;
+                }
+                if (reminderData.reminderDate) {
+                    document.getElementById('reminder-date').value = reminderData.reminderDate;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento delle impostazioni di promemoria:', error);
+        });
+
+    // Mostra la modale
+    $('#setReminderModal').modal('show');
+
+    // Aggiungi event listener per il pulsante Salva
+    const saveReminderBtn = document.getElementById('save-reminder-btn');
+    saveReminderBtn.onclick = () => {
+        const reminderAmount = parseFloat(document.getElementById('reminder-amount').value);
+        const reminderDate = document.getElementById('reminder-date').value;
+
+        if (isNaN(reminderAmount) && !reminderDate) {
+            showAlert('warning', 'Attenzione', 'Inserisci almeno un valore per il promemoria.');
+            return;
+        }
+
+        saveReminderSettings(clientName, reminderAmount || null, reminderDate || null);
+    };
 }
 
 // Funzione per visualizzare i timer

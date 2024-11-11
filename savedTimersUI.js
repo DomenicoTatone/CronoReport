@@ -86,6 +86,37 @@ const savedTimersTemplate = `
     </div>
 </div>
 
+<!-- Modal per impostare il promemoria -->
+<div class="modal fade" id="setReminderModal" tabindex="-1" role="dialog" aria-labelledby="setReminderModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="setReminderModalLabel">Imposta Promemoria per <span id="modal-client-name"></span></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Chiudi">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Form per impostare il promemoria -->
+        <form id="reminderForm">
+          <div class="form-group">
+            <label for="reminder-amount">Importo Obiettivo (€):</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="reminder-amount" placeholder="Es: 1000">
+          </div>
+          <div class="form-group">
+            <label for="reminder-date">Data Scadenza:</label>
+            <input type="date" class="form-control" id="reminder-date">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-primary" id="save-reminder-btn">Salva Promemoria</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Sezione Cestino -->
 <div id="recycle-bin-section" class="container mt-5 custom-container" style="display: none;">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
@@ -350,6 +381,12 @@ function formatTime(date) {
 
 function formatDate(date) {
     return date.toLocaleDateString('it-IT');
+}
+
+function formatDate(dateStr) {
+    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+    const dateObj = new Date(dateStr);
+    return dateObj.toLocaleDateString('it-IT', options);
 }
 
 // Funzione per formattare la data e l'ora
