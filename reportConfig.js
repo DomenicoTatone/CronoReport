@@ -43,10 +43,6 @@ const reportTemplate = `
                             <label for="report-header" class="font-weight-bold">Intestazione del Report:</label>
                             <input type="text" id="report-header" class="form-control" placeholder="Inserisci l'intestazione del report">
                         </div>
-                        <div class="form-group">
-                            <label for="hourly-rate" class="font-weight-bold">Tariffa Oraria (€):</label>
-                            <input type="number" id="hourly-rate" class="form-control" placeholder="Inserisci la tariffa oraria" min="0" step="0.01">
-                        </div>
                         <!-- Nome per salvare la configurazione -->
                         <div class="form-group">
                             <label for="config-name" class="font-weight-bold">Nome Configurazione (per salvare):</label>
@@ -85,6 +81,13 @@ const reportTemplate = `
                                 <option value="">Tutti i Tipi di Lavoro</option>
                             </select>
                         </div>
+                        <!-- Opzione per includere la Tariffa Oraria -->
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="include-hourly-rate" class="form-check-input" checked>
+                                <label for="include-hourly-rate" class="form-check-label">Includi Tariffa Oraria nel Report</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -100,30 +103,24 @@ const reportTemplate = `
         </div>
         <table class="table table-striped table-bordered">
             <thead class="thead-dark">
-                <tr>
-                    <th>Data</th>
-                    <th>Tipo di Lavoro</th>
-                    <th>Link</th>
-                    <th>Tempo Lavorato</th>
-                    <th>Importo (€)</th>
-                </tr>
+                <!-- Le intestazioni della tabella verranno generate dinamicamente -->
             </thead>
             <tbody id="report-table-body">
                 <!-- I dati del report verranno inseriti qui -->
             </tbody>
         </table>
         <h4 class="text-right">Totale: € <span id="total-amount">0.00</span></h4>
-<div class="text-center">
-    <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
-        <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
-    </button>
-    <button id="export-google-doc-btn" class="btn btn-primary mt-3 mr-2">
-        <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
-    </button>
-    <button id="export-google-sheet-btn" class="btn btn-primary mt-3">
-        <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
-    </button>
-</div>
+        <div class="text-center">
+            <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
+                <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
+            </button>
+            <button id="export-google-doc-btn" class="btn btn-primary mt-3 mr-2">
+                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
+            </button>
+            <button id="export-google-sheet-btn" class="btn btn-primary mt-3">
+                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
+            </button>
+        </div>
     </div>
 </div>
 `;
@@ -140,7 +137,6 @@ function extractDomainName(url) {
     try {
         const hostname = new URL(url).hostname;
         let domain = hostname.startsWith('www.') ? hostname.substring(4) : hostname;
-        domain = domain.split('.')[0]; // Rimuove il TLD
         return domain;
     } catch (e) {
         return 'Link';
@@ -262,7 +258,6 @@ function saveReportConfig(config) {
         uid: currentUser.uid,
         name: config.name,
         reportHeader: config.reportHeader,
-        hourlyRate: config.hourlyRate,
         companyLogoBase64: config.companyLogoBase64,
         filterClient: config.filterClient,
         filterSite: config.filterSite,
@@ -293,7 +288,6 @@ function applySavedConfig(configId) {
     const config = savedConfigs[configId];
     if (config) {
         document.getElementById('report-header').value = config.reportHeader;
-        document.getElementById('hourly-rate').value = config.hourlyRate;
         document.getElementById('filter-client').value = config.filterClient || '';
         document.getElementById('filter-site').value = config.filterSite || '';
         document.getElementById('filter-worktype').value = config.filterWorktype || '';
@@ -309,7 +303,7 @@ function applySavedConfig(configId) {
 }
 
 // Funzione per generare il PDF usando jsPDF
-function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, reportFileName) {
+function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -348,20 +342,27 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, r
 
     function generatePDFContent(startY) {
         // Prepara i dati della tabella
-        const tableColumn = ["Data", "Tipo di Lavoro", "Link", "Tempo Lavorato", "Importo (€)"];
+        const tableColumn = ["Data", "Tipo di Lavoro"];
+        if (includeHourlyRate) {
+            tableColumn.push("Tariffa Oraria (€)");
+        }
+        tableColumn.push("Link", "Tempo Lavorato", "Importo (€)");
         const tableRows = [];
 
         reportData.forEach(item => {
-            // Lascia vuoto il testo del link nella cella per evitare sovrapposizioni
             const rowData = [
                 item.date,
-                item.workType,
-                '', // Lascia vuoto il testo del link nella cella
-                item.timeWorked,
-                item.amount
+                item.workType
             ];
+            if (includeHourlyRate) {
+                rowData.push(item.hourlyRate);
+            }
+            rowData.push('', item.timeWorked, item.amount);
             tableRows.push(rowData);
         });
+
+        // Determina l'indice della colonna del link
+        const linkColumnIndex = includeHourlyRate ? 3 : 2;
 
         // Aggiungi la tabella usando autoTable
         doc.autoTable({
@@ -369,16 +370,13 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, r
             body: tableRows,
             startY: startY,
             styles: { cellWidth: 'wrap', fontSize: 10 },
-            columnStyles: {
-                2: { cellWidth: 40 } // Colonna del link
-            },
             didParseCell: function (data) {
-                if (data.section === 'body' && data.column.index === 2) { // Solo nel corpo della tabella
+                if (data.section === 'body' && data.column.index === linkColumnIndex) { // Solo nel corpo della tabella
                     data.cell.text = ''; // Rimuovi il testo dalla cella
                 }
             },
             didDrawCell: function (data) {
-                if (data.section === 'body' && data.column.index === 2) { // Solo nel corpo della tabella
+                if (data.section === 'body' && data.column.index === linkColumnIndex) { // Solo nel corpo della tabella
                     const link = reportData[data.row.index].link;
                     if (link) {
                         // Imposta il colore del testo a blu
@@ -469,21 +467,24 @@ function insertContentIntoDoc(documentId, reportContent) {
     });
 }
 
-function generateReportContentString(reportHeader, reportData, totalAmount) {
-  let content = `${reportHeader}\n\n`;
+function generateReportContentString(reportHeader, reportData, totalAmount, includeHourlyRate) {
+    let content = `${reportHeader}\n\n`;
 
-  reportData.forEach(item => {
-    content += `Data: ${item.date}\n`;
-    content += `Tipo di Lavoro: ${item.workType}\n`;
-    content += `Link: ${item.link}\n`;
-    content += `Tempo Lavorato: ${item.timeWorked}\n`;
-    content += `Importo (€): ${item.amount}\n`;
-    content += '\n';
-  });
+    reportData.forEach(item => {
+        content += `Data: ${item.date}\n`;
+        content += `Tipo di Lavoro: ${item.workType}\n`;
+        if (includeHourlyRate) {
+            content += `Tariffa Oraria (€): ${item.hourlyRate}\n`;
+        }
+        content += `Link: ${item.link}\n`;
+        content += `Tempo Lavorato: ${item.timeWorked}\n`;
+        content += `Importo (€): ${item.amount}\n`;
+        content += '\n';
+    });
 
-  content += `Totale: € ${totalAmount.toFixed(2)}\n`;
+    content += `Totale: € ${totalAmount.toFixed(2)}\n`;
 
-  return content;
+    return content;
 }
 
 function createGoogleSheet(reportValues, reportFileName) {
@@ -536,8 +537,7 @@ function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
     });
 }
 
-
-function generateReportValuesArray(reportHeader, reportData, totalAmount) {
+function generateReportValuesArray(reportHeader, reportData, totalAmount, includeHourlyRate) {
     const values = [];
 
     // Aggiungi l'intestazione del report
@@ -545,16 +545,31 @@ function generateReportValuesArray(reportHeader, reportData, totalAmount) {
     values.push([]); // Riga vuota
 
     // Aggiungi le intestazioni delle colonne
-    values.push(['Data', 'Tipo di Lavoro', 'Link', 'Tempo Lavorato', 'Importo (€)']);
+    const headers = ['Data', 'Tipo di Lavoro'];
+    if (includeHourlyRate) {
+        headers.push('Tariffa Oraria (€)');
+    }
+    headers.push('Link', 'Tempo Lavorato', 'Importo (€)');
+    values.push(headers);
 
     // Aggiungi le righe dei dati
     reportData.forEach(item => {
-        values.push([item.date, item.workType, item.link, item.timeWorked, item.amount]);
+        const row = [item.date, item.workType];
+        if (includeHourlyRate) {
+            row.push(item.hourlyRate);
+        }
+        row.push(item.link, item.timeWorked, item.amount);
+        values.push(row);
     });
 
     // Aggiungi una riga vuota e il totale
     values.push([]);
-    values.push(['', '', '', 'Totale', totalAmount.toFixed(2)]);
+    const totalRow = ['', ''];
+    if (includeHourlyRate) {
+        totalRow.push('');
+    }
+    totalRow.push('', 'Totale', totalAmount.toFixed(2));
+    values.push(totalRow);
 
     return values;
 }
