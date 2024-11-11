@@ -407,11 +407,17 @@ function initializeReportHistoryEvents() {
      * Funzione per eliminare tutti i report di un cliente
      */
     function deleteReportsByClient(clientName) {
-        // Ottieni tutti i report per il cliente
-        db.collection('reports')
-            .where('uid', '==', currentUser.uid)
-            .where('filterClientName', '==', clientName)
-            .get()
+        let query = db.collection('reports')
+            .where('uid', '==', currentUser.uid);
+    
+        if (clientName === 'Cliente Sconosciuto') {
+            // Cerca report con filterClientName null o stringa vuota
+            query = query.where('filterClientName', 'in', [null, '']);
+        } else {
+            query = query.where('filterClientName', '==', clientName);
+        }
+    
+        query.get()
             .then(snapshot => {
                 const batch = db.batch();
                 snapshot.forEach(doc => {
@@ -446,11 +452,17 @@ function initializeReportHistoryEvents() {
      * Funzione per eliminare tutti i report di un anno per un cliente
      */
     function deleteReportsByClientYear(clientName, year) {
-        // Ottieni tutti i report per il cliente e l'anno
-        db.collection('reports')
-            .where('uid', '==', currentUser.uid)
-            .where('filterClientName', '==', clientName)
-            .get()
+        let query = db.collection('reports')
+            .where('uid', '==', currentUser.uid);
+    
+        if (clientName === 'Cliente Sconosciuto') {
+            // Cerca report con filterClientName null o stringa vuota
+            query = query.where('filterClientName', 'in', [null, '']);
+        } else {
+            query = query.where('filterClientName', '==', clientName);
+        }
+    
+        query.get()
             .then(snapshot => {
                 const batch = db.batch();
                 snapshot.forEach(doc => {
