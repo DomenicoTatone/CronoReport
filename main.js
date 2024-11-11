@@ -141,12 +141,12 @@ function loadSection(section) {
             initializeSavedTimersEvents();
             break;
         case 'recycle-bin':
-            contentSection.innerHTML = savedTimersTemplate; // Usa il template aggiornato
-            // Mostra la sezione del cestino e nascondi le altre
+            contentSection.innerHTML = savedTimersTemplate; // Use the updated template
+            // Show the recycle bin section and hide others
             document.getElementById('saved-timers-section').style.display = 'none';
             document.getElementById('recycle-bin-section').style.display = 'block';
-            loadRecycleBin(); // Per i timer eliminati
-            loadRecycleBinReports(); // Per i report eliminati
+            initializeRecycleBinTimersEvents(); // Initialize events for recycle bin timers
+            initializeRecycleBinReportsEvents(); // Initialize events for recycle bin reports
             break;
         case 'report':
             contentSection.innerHTML = reportTemplate;

@@ -1,6 +1,54 @@
 // recycleBinTimers.js
 
-function loadRecycleBin() {
+// Funzione per inizializzare gli eventi della sezione Cestino Timer
+function initializeRecycleBinTimersEvents() {
+    const recycleBinTimersDiv = document.getElementById('recycle-bin-timers');
+
+    // Aggiungi campo di ricerca e pulsanti Espandi/Comprimi Tutto
+    const recycleBinTimersControls = document.createElement('div');
+    recycleBinTimersControls.classList.add('d-flex', 'justify-content-between', 'mb-3');
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'search-recycle-timers-input';
+    searchInput.classList.add('form-control');
+    searchInput.placeholder = 'Cerca tra i timer eliminati...';
+    searchInput.style.maxWidth = '300px';
+
+    const buttonsDiv = document.createElement('div');
+
+    const expandAllBtn = document.createElement('button');
+    expandAllBtn.classList.add('btn', 'btn-outline-secondary', 'mr-2');
+    expandAllBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
+    expandAllBtn.addEventListener('click', () => {
+        $('#recycle-bin-timers .collapse').collapse('show');
+    });
+
+    const collapseAllBtn = document.createElement('button');
+    collapseAllBtn.classList.add('btn', 'btn-outline-secondary');
+    collapseAllBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
+    collapseAllBtn.addEventListener('click', () => {
+        $('#recycle-bin-timers .collapse').collapse('hide');
+    });
+
+    buttonsDiv.appendChild(expandAllBtn);
+    buttonsDiv.appendChild(collapseAllBtn);
+
+    recycleBinTimersControls.appendChild(searchInput);
+    recycleBinTimersControls.appendChild(buttonsDiv);
+
+    recycleBinTimersDiv.parentNode.insertBefore(recycleBinTimersControls, recycleBinTimersDiv);
+
+    searchInput.addEventListener('input', () => {
+        const searchTerm = searchInput.value.trim();
+        loadRecycleBinTimers(searchTerm);
+    });
+
+    // Carica i timer per la prima volta
+    loadRecycleBinTimers();
+}
+
+function loadRecycleBinTimers(searchTerm = '') {
     const recycleBinTimersDiv = document.getElementById('recycle-bin-timers');
     recycleBinTimersDiv.innerHTML = ''; // Svuota la lista
 
@@ -18,17 +66,44 @@ function loadRecycleBin() {
                 return;
             }
 
-            // Organizzazione dei timer per cliente, anno e mese
-            const timersByClient = {};
-
+            // Raccogli i timer in un array
+            let timersArray = [];
             snapshot.forEach(doc => {
                 const logData = doc.data();
+                timersArray.push({
+                    id: doc.id,
+                    data: logData
+                });
+            });
+
+            // Filtra i timer in base al termine di ricerca
+            if (searchTerm) {
+                const lowerSearchTerm = searchTerm.toLowerCase();
+                timersArray = timersArray.filter(timer => {
+                    const logData = timer.data;
+                    return Object.values(logData).some(value => {
+                        if (typeof value === 'string') {
+                            return value.toLowerCase().includes(lowerSearchTerm);
+                        } else if (typeof value === 'number') {
+                            return value.toString().includes(lowerSearchTerm);
+                        } else if (value instanceof firebase.firestore.Timestamp) {
+                            const dateStr = value.toDate().toLocaleDateString();
+                            return dateStr.includes(lowerSearchTerm);
+                        }
+                        return false;
+                    });
+                });
+            }
+
+            // Organizza i timer per cliente, anno e mese
+            const timersByClient = {};
+
+            timersArray.forEach(timerObj => {
+                const logData = timerObj.data;
                 const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-                // Ottieni la data di eliminazione o di inizio se deletedAt non è disponibile
                 const deletedAt = logData.deletedAt ? logData.deletedAt.toDate() : logData.startTime.toDate();
 
-                // Ottieni l'anno e il mese
                 const year = deletedAt.getFullYear();
                 const month = String(deletedAt.getMonth() + 1).padStart(2, '0'); // Mese con zero iniziale
 
@@ -45,7 +120,7 @@ function loadRecycleBin() {
                 }
 
                 timersByClient[clientName][year][month].push({
-                    id: doc.id,
+                    id: timerObj.id,
                     data: logData
                 });
             });
@@ -58,12 +133,11 @@ function loadRecycleBin() {
                 const clientSection = document.createElement('div');
                 clientSection.classList.add('card');
 
-                // Card Header per il Cliente
+                // Header del Cliente
                 const clientHeader = document.createElement('div');
-                clientHeader.classList.add('card-header');
+                clientHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
                 clientHeader.id = `recycle-heading-${clientId}`;
 
-                // Pulsante per espandere/comprimere il Cliente
                 const clientButton = document.createElement('button');
                 clientButton.classList.add('btn', 'btn-link', 'text-left', 'collapsed');
                 clientButton.setAttribute('data-toggle', 'collapse');
@@ -72,53 +146,34 @@ function loadRecycleBin() {
                 clientButton.setAttribute('aria-controls', `recycle-collapse-${clientId}`);
                 clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
 
-                // Pulsanti per Espandere/Comprimi Tutto per il Cliente
-                const expandAllBtn = document.createElement('button');
-                expandAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                expandAllBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
-                expandAllBtn.addEventListener('click', () => {
-                    const clientCollapseElement = $(`#recycle-collapse-${clientId}`);
-                    if (clientCollapseElement.hasClass('show')) {
-                        $(`#recycle-collapse-${clientId} .collapse`).collapse('show');
-                    } else {
-                        clientCollapseElement.collapse('show');
-                        const expandChildSections = function () {
-                            $(`#recycle-collapse-${clientId} .collapse`).collapse('show');
-                            clientCollapseElement.off('shown.bs.collapse', expandChildSections);
-                        };
-                        clientCollapseElement.on('shown.bs.collapse', expandChildSections);
-                    }
-                });
-
-                const collapseAllBtn = document.createElement('button');
-                collapseAllBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                collapseAllBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
-                collapseAllBtn.addEventListener('click', () => {
-                    $(`#recycle-collapse-${clientId} .collapse`).collapse('hide');
-                    $(`#recycle-collapse-${clientId}`).collapse('hide');
-                });
-
-                // Pulsante per Eliminare il Cliente (definitivamente)
+                // Pulsante per Eliminare Cliente
                 const deleteClientBtn = document.createElement('button');
-                deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
                 deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Cliente';
                 deleteClientBtn.addEventListener('click', () => {
-                    permanentlyDeleteClientTimers(clientName, clientSection);
+                    Swal.fire({
+                        title: 'Sei sicuro?',
+                        text: `Vuoi eliminare definitivamente tutti i timer del cliente "${clientName}"? Questa azione non può essere annullata.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Sì, elimina tutti!',
+                        cancelButtonText: 'Annulla'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            permanentlyDeleteClientTimers(clientName, clientSection);
+                        }
+                    });
                 });
 
                 const clientHeaderActions = document.createElement('div');
-                clientHeaderActions.appendChild(expandAllBtn);
-                clientHeaderActions.appendChild(collapseAllBtn);
                 clientHeaderActions.appendChild(deleteClientBtn);
 
-                const clientHeaderContainer = document.createElement('div');
-                clientHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
-                clientHeaderContainer.appendChild(clientButton);
-                clientHeaderContainer.appendChild(clientHeaderActions);
+                clientHeader.appendChild(clientButton);
+                clientHeader.appendChild(clientHeaderActions);
 
-                clientHeader.appendChild(clientHeaderContainer);
-
-                // Div per il collapse del Cliente
+                // Corpo del Cliente
                 const clientCollapse = document.createElement('div');
                 clientCollapse.id = `recycle-collapse-${clientId}`;
                 clientCollapse.classList.add('collapse');
@@ -143,7 +198,7 @@ function loadRecycleBin() {
 
                     // Header per l'Anno
                     const yearHeader = document.createElement('div');
-                    yearHeader.classList.add('card-header');
+                    yearHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
                     yearHeader.id = `recycle-heading-${yearId}`;
 
                     const yearButton = document.createElement('button');
@@ -154,53 +209,34 @@ function loadRecycleBin() {
                     yearButton.setAttribute('aria-controls', `recycle-collapse-${yearId}`);
                     yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
 
-                    // Pulsanti per Espandere/Comprimi Tutto per l'Anno
-                    const expandYearBtn = document.createElement('button');
-                    expandYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                    expandYearBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
-                    expandYearBtn.addEventListener('click', () => {
-                        const yearCollapseElement = $(`#recycle-collapse-${yearId}`);
-                        if (yearCollapseElement.hasClass('show')) {
-                            $(`#recycle-collapse-${yearId} .collapse`).collapse('show');
-                        } else {
-                            yearCollapseElement.collapse('show');
-                            const expandChildSections = function () {
-                                $(`#recycle-collapse-${yearId} .collapse`).collapse('show');
-                                yearCollapseElement.off('shown.bs.collapse', expandChildSections);
-                            };
-                            yearCollapseElement.on('shown.bs.collapse', expandChildSections);
-                        }
-                    });
-
-                    const collapseYearBtn = document.createElement('button');
-                    collapseYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
-                    collapseYearBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
-                    collapseYearBtn.addEventListener('click', () => {
-                        $(`#recycle-collapse-${yearId} .collapse`).collapse('hide');
-                        $(`#recycle-collapse-${yearId}`).collapse('hide');
-                    });
-
-                    // Pulsante per Eliminare l'Anno (definitivamente)
+                    // Pulsante per Eliminare Anno
                     const deleteYearBtn = document.createElement('button');
-                    deleteYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                    deleteYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
                     deleteYearBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Anno';
                     deleteYearBtn.addEventListener('click', () => {
-                        permanentlyDeleteYearTimers(clientName, year, yearSection);
+                        Swal.fire({
+                            title: 'Sei sicuro?',
+                            text: `Vuoi eliminare definitivamente tutti i timer dell'anno "${year}" per il cliente "${clientName}"? Questa azione non può essere annullata.`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'Sì, elimina tutti!',
+                            cancelButtonText: 'Annulla'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                permanentlyDeleteYearTimers(clientName, year, yearSection);
+                            }
+                        });
                     });
 
                     const yearHeaderActions = document.createElement('div');
-                    yearHeaderActions.appendChild(expandYearBtn);
-                    yearHeaderActions.appendChild(collapseYearBtn);
                     yearHeaderActions.appendChild(deleteYearBtn);
 
-                    const yearHeaderContainer = document.createElement('div');
-                    yearHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
-                    yearHeaderContainer.appendChild(yearButton);
-                    yearHeaderContainer.appendChild(yearHeaderActions);
+                    yearHeader.appendChild(yearButton);
+                    yearHeader.appendChild(yearHeaderActions);
 
-                    yearHeader.appendChild(yearHeaderContainer);
-
-                    // Div per il collapse dell'Anno
+                    // Corpo dell'Anno
                     const yearCollapse = document.createElement('div');
                     yearCollapse.id = `recycle-collapse-${yearId}`;
                     yearCollapse.classList.add('collapse');
@@ -225,7 +261,7 @@ function loadRecycleBin() {
 
                         // Header per il Mese
                         const monthHeader = document.createElement('div');
-                        monthHeader.classList.add('card-header');
+                        monthHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
                         monthHeader.id = `recycle-heading-${monthId}`;
 
                         const monthButton = document.createElement('button');
@@ -240,12 +276,25 @@ function loadRecycleBin() {
 
                         monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
 
-                        // Pulsante per Eliminare il Mese (definitivamente)
+                        // Pulsante per Eliminare Mese
                         const deleteMonthBtn = document.createElement('button');
-                        deleteMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+                        deleteMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
                         deleteMonthBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Mese';
                         deleteMonthBtn.addEventListener('click', () => {
-                            permanentlyDeleteMonthTimers(clientName, year, month, monthSection);
+                            Swal.fire({
+                                title: 'Sei sicuro?',
+                                text: `Vuoi eliminare definitivamente tutti i timer del mese "${monthName}" dell'anno "${year}" per il cliente "${clientName}"? Questa azione non può essere annullata.`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonColor: '#d33',
+                                cancelButtonColor: '#6c757d',
+                                confirmButtonText: 'Sì, elimina tutti!',
+                                cancelButtonText: 'Annulla'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    permanentlyDeleteMonthTimers(clientName, year, month, monthSection);
+                                }
+                            });
                         });
 
                         const monthHeaderActions = document.createElement('div');
@@ -258,7 +307,7 @@ function loadRecycleBin() {
 
                         monthHeader.appendChild(monthHeaderContainer);
 
-                        // Div per il collapse del Mese
+                        // Corpo del Mese
                         const monthCollapse = document.createElement('div');
                         monthCollapse.id = `recycle-collapse-${monthId}`;
                         monthCollapse.classList.add('collapse');
@@ -276,7 +325,6 @@ function loadRecycleBin() {
                         const headerRow = document.createElement('tr');
 
                         const headers = [
-                            'Seleziona',
                             'Cliente - Sito',
                             'Tipo di Lavoro',
                             'Durata',
