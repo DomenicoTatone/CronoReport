@@ -62,11 +62,22 @@ const savedTimersTemplate = `
         </div>
     </div>
 
-    <!-- Pulsante Annulla Ultima Operazione -->
-    <div class="text-right mb-4">
-        <button id="undo-action-btn" class="btn btn-outline-secondary">
-            <i class="fas fa-undo mr-2"></i>Annulla Ultima Operazione
-        </button>
+    <!-- Sezione Ricerca e Pulsanti -->
+    <div class="d-flex justify-content-between mb-4">
+        <div class="search-container">
+            <input type="text" id="search-timers-input" class="form-control" placeholder="Cerca tra i timer...">
+        </div>
+        <div class="action-buttons">
+            <button id="undo-action-btn" class="btn btn-outline-secondary mr-2">
+                <i class="fas fa-undo mr-2"></i>Annulla Ultima Operazione
+            </button>
+            <button id="export-google-doc-btn" class="btn btn-primary mr-2" disabled>
+                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
+            </button>
+            <button id="export-google-sheet-btn" class="btn btn-primary" disabled>
+                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
+            </button>
+        </div>
     </div>
 
     <!-- Lista Timer Salvati -->
@@ -316,3 +327,39 @@ function getMonthName(monthNumber) {
     return months[monthNumber - 1];
 }
 
+// Funzione per formattare la durata in ore, minuti e secondi
+function formatDuration(seconds) {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    const hrsDisplay = hrs > 0 ? (hrs < 10 ? '0' + hrs : hrs) + 'h ' : '00h ';
+    const minsDisplay = mins > 0 ? (mins < 10 ? '0' + mins : mins) + 'm ' : '00m ';
+    const secsDisplay = secs > 0 ? (secs < 10 ? '0' + secs : secs) + 's' : '00s';
+
+    return hrsDisplay + minsDisplay + secsDisplay;
+}
+
+function padZero(num) {
+    return num.toString().padStart(2, '0');
+}
+
+function formatTime(date) {
+    return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(date) {
+    return date.toLocaleDateString('it-IT');
+}
+
+// Funzione per formattare la data e l'ora
+function formatDateTime(timestamp) {
+    const date = timestamp.toDate();
+    return date.toLocaleString('it-IT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}

@@ -23,9 +23,43 @@ const DISCOVERY_DOCS = [
 ];
 
 // Ambiti di autorizzazione richiesti
-const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file, https://www.googleapis.com/auth/documents, https://www.googleapis.com/auth/spreadsheets';
 
 let GoogleAuth;
+
+function handleClientLoad() {
+    gapi.load('client:auth2', initClient);
+}
+
+function initClient() {
+    gapi.client.init({
+        discoveryDocs: DISCOVERY_DOCS,
+        clientId: CLIENT_ID,
+        scope: SCOPES
+    }).then(() => {
+        GoogleAuth = gapi.auth2.getAuthInstance();
+
+        // Aggiorna lo stato di accesso
+        updateSigninStatus(GoogleAuth.isSignedIn.get());
+
+        // Ascolta i cambiamenti nello stato di accesso
+        GoogleAuth.isSignedIn.listen(updateSigninStatus);
+
+        // Event listeners per i pulsanti di accesso e disconnessione
+        const googleSignInBtn = document.getElementById('google-signin-btn');
+        const googleSignOutBtn = document.getElementById('google-signout-btn');
+
+        if (googleSignInBtn) {
+            googleSignInBtn.addEventListener('click', handleSignInClick);
+        }
+
+        if (googleSignOutBtn) {
+            googleSignOutBtn.addEventListener('click', handleSignOutClick);
+        }
+    }, (error) => {
+        console.error('Errore durante l\'inizializzazione del client Google API:', error);
+    });
+}
 
 function updateSigninStatus(isSignedIn) {
   const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
@@ -34,23 +68,23 @@ function updateSigninStatus(isSignedIn) {
   const googleSignOutBtn = document.getElementById('google-signout-btn');
 
   if (isSignedIn) {
-    // L'utente è autenticato
-    // Abilita i pulsanti di esportazione
-    if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
-    if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
+      // L'utente è autenticato
+      // Abilita i pulsanti di esportazione
+      if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
+      if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
 
-    // Mostra il pulsante di disconnessione
-    if (googleSignInBtn) googleSignInBtn.style.display = 'none';
-    if (googleSignOutBtn) googleSignOutBtn.style.display = 'inline-block';
+      // Mostra il pulsante di disconnessione
+      if (googleSignInBtn) googleSignInBtn.style.display = 'none';
+      if (googleSignOutBtn) googleSignOutBtn.style.display = 'inline-block';
   } else {
-    // L'utente non è autenticato
-    // Disabilita i pulsanti di esportazione
-    if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
-    if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
+      // L'utente non è autenticato
+      // Disabilita i pulsanti di esportazione
+      if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
+      if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
 
-    // Mostra il pulsante di accesso
-    if (googleSignInBtn) googleSignInBtn.style.display = 'inline-block';
-    if (googleSignOutBtn) googleSignOutBtn.style.display = 'none';
+      // Mostra il pulsante di accesso
+      if (googleSignInBtn) googleSignInBtn.style.display = 'inline-block';
+      if (googleSignOutBtn) googleSignOutBtn.style.display = 'none';
   }
 }
 
