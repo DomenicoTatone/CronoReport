@@ -165,10 +165,49 @@ function displayTimers(timers) {
             yearButton.setAttribute('aria-controls', `collapse-${yearId}`);
             yearButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${year}`;
 
-            // Contenitore per il pulsante dell'anno
+            // Pulsanti per Espandere/Comprimi Tutto per l'Anno
+            const expandYearBtn = document.createElement('button');
+            expandYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
+            expandYearBtn.innerHTML = '<i class="fas fa-plus-square"></i> Espandi Tutto';
+            expandYearBtn.addEventListener('click', () => {
+                const yearCollapseElement = $(`#collapse-${yearId}`);
+                if (yearCollapseElement.hasClass('show')) {
+                    $(`#collapse-${yearId} .collapse`).collapse('show');
+                } else {
+                    yearCollapseElement.collapse('show');
+                    const expandChildSections = function () {
+                        $(`#collapse-${yearId} .collapse`).collapse('show');
+                        yearCollapseElement.off('shown.bs.collapse', expandChildSections);
+                    };
+                    yearCollapseElement.on('shown.bs.collapse', expandChildSections);
+                }
+            });
+
+            const collapseYearBtn = document.createElement('button');
+            collapseYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary', 'ml-2');
+            collapseYearBtn.innerHTML = '<i class="fas fa-minus-square"></i> Comprimi Tutto';
+            collapseYearBtn.addEventListener('click', () => {
+                $(`#collapse-${yearId} .collapse`).collapse('hide');
+                $(`#collapse-${yearId}`).collapse('hide');
+            });
+
+            // Pulsante per Eliminare l'Anno
+            const deleteYearBtn = document.createElement('button');
+            deleteYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
+            deleteYearBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Anno';
+            deleteYearBtn.addEventListener('click', () => {
+                deleteYearTimers(clientName, year, yearSection);
+            });
+
+            const yearHeaderActions = document.createElement('div');
+            yearHeaderActions.appendChild(expandYearBtn);
+            yearHeaderActions.appendChild(collapseYearBtn);
+            yearHeaderActions.appendChild(deleteYearBtn);
+
             const yearHeaderContainer = document.createElement('div');
             yearHeaderContainer.classList.add('d-flex', 'justify-content-between', 'align-items-center');
             yearHeaderContainer.appendChild(yearButton);
+            yearHeaderContainer.appendChild(yearHeaderActions);
 
             yearHeader.appendChild(yearHeaderContainer);
 
@@ -452,6 +491,84 @@ function displayTimers(timers) {
             clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
         });
     }
+}
+
+function deleteYearTimers(clientName, year, yearSection) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: `Vuoi eliminare tutti i timer dell'anno ${year} per il cliente ${clientName}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Recupera tutti i timer dell'anno specificato per il cliente
+            db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .where('clientName', '==', clientName)
+                .get()
+                .then(snapshot => {
+                    const batch = db.batch();
+                    const timerIds = [];
+
+                    snapshot.forEach(doc => {
+                        const logData = doc.data();
+                        const startTime = logData.startTime.toDate();
+                        const timerYear = startTime.getFullYear();
+
+                        if (timerYear === parseInt(year)) {
+                            const timerRef = db.collection('timeLogs').doc(doc.id);
+                            batch.update(timerRef, {
+                                isDeleted: true,
+                                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            timerIds.push(doc.id);
+                        }
+                    });
+
+                    batch.commit().then(() => {
+                        // Rimuovi la sezione dell'anno dall'interfaccia
+                        yearSection.parentNode.removeChild(yearSection);
+
+                        // Salva l'operazione per l'undo
+                        lastOperation = {
+                            action: 'deleteYear',
+                            clientName: clientName,
+                            year: year,
+                            timerIds: timerIds,
+                            yearSection: yearSection
+                        };
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Anno Eliminato',
+                            text: `Tutti i timer dell'anno ${year} per il cliente ${clientName} sono stati eliminati.`,
+                            confirmButtonText: 'OK'
+                        });
+                    }).catch(error => {
+                        console.error('Errore durante l\'eliminazione dei timer dell\'anno:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Errore',
+                            text: 'Si è verificato un errore durante l\'eliminazione dei timer.',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                }).catch(error => {
+                    console.error('Errore durante il recupero dei timer dell\'anno:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante il recupero dei timer.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+    });
 }
 
 // Funzione per caricare i clienti nel menu a tendina dei filtri

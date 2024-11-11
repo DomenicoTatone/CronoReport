@@ -83,13 +83,19 @@ function initializeSavedTimersEvents() {
                 });
                 return;
             }
-
+    
             switch (lastOperation.action) {
                 case 'delete':
                     undoDeleteTimer(lastOperation.timerId);
                     break;
                 case 'unmark':
                     undoUnmarkTimers(lastOperation.timerIds);
+                    break;
+                case 'deleteMonth':
+                    undoDeleteMonth(lastOperation);
+                    break;
+                case 'deleteYear':
+                    undoDeleteYear(lastOperation);
                     break;
                 default:
                     Swal.fire({
@@ -102,7 +108,7 @@ function initializeSavedTimersEvents() {
             }
         });
     }
-
+    
     // Event listener per la ricerca
     if (searchTimersInput) {
         searchTimersInput.addEventListener('input', () => {
@@ -126,6 +132,184 @@ function initializeSavedTimersEvents() {
 
     // Carica tutti i timer salvati inizialmente
     loadSavedTimers();
+}
+
+function undoDeleteYear(operation) {
+    const { clientName, year, timerIds, yearSection } = operation;
+    const batch = db.batch();
+
+    timerIds.forEach(timerId => {
+        const timerRef = db.collection('timeLogs').doc(timerId);
+        batch.update(timerRef, {
+            isDeleted: false,
+            deletedAt: null
+        });
+    });
+
+    batch.commit().then(() => {
+        // Re-inserisci la sezione dell'anno nell'interfaccia
+        const clientSections = document.querySelectorAll('.card');
+        let inserted = false;
+
+        clientSections.forEach(clientSection => {
+            const clientHeader = clientSection.querySelector('.card-header button');
+            if (clientHeader && clientHeader.textContent.trim() === clientName) {
+                const clientBody = clientSection.querySelector('.card-body');
+                clientBody.appendChild(yearSection);
+                inserted = true;
+            }
+        });
+
+        if (!inserted) {
+            // Se la sezione del cliente non esiste più, ricarica i timer
+            loadSavedTimers(getCurrentFilters());
+        }
+
+        lastOperation = null;
+        Swal.fire({
+            icon: 'success',
+            title: 'Operazione Annullata',
+            text: `L'eliminazione dell'anno ${year} per il cliente ${clientName} è stata annullata.`,
+            confirmButtonText: 'OK'
+        });
+    }).catch(error => {
+        console.error('Errore durante l\'annullamento dell\'eliminazione dell\'anno:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'Si è verificato un errore durante il ripristino dei timer.',
+            confirmButtonText: 'OK'
+        });
+    });
+}
+
+function undoDeleteMonth(operation) {
+    const { clientName, year, month, timerIds, monthSection } = operation;
+    const batch = db.batch();
+
+    timerIds.forEach(timerId => {
+        const timerRef = db.collection('timeLogs').doc(timerId);
+        batch.update(timerRef, {
+            isDeleted: false,
+            deletedAt: null
+        });
+    });
+
+    batch.commit().then(() => {
+        // Re-inserisci la sezione del mese nell'interfaccia
+        const yearSections = document.querySelectorAll('.card');
+        let inserted = false;
+
+        yearSections.forEach(yearSection => {
+            const yearHeader = yearSection.querySelector('.card-header button');
+            if (yearHeader && yearHeader.textContent.trim() === year) {
+                const yearBody = yearSection.querySelector('.card-body');
+                yearBody.appendChild(monthSection);
+                inserted = true;
+            }
+        });
+
+        if (!inserted) {
+            // Se la sezione dell'anno non esiste più, ricarica i timer
+            loadSavedTimers(getCurrentFilters());
+        }
+
+        lastOperation = null;
+        Swal.fire({
+            icon: 'success',
+            title: 'Operazione Annullata',
+            text: `L'eliminazione del mese ${month} per l'anno ${year} è stata annullata.`,
+            confirmButtonText: 'OK'
+        });
+    }).catch(error => {
+        console.error('Errore durante l\'annullamento dell\'eliminazione del mese:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'Si è verificato un errore durante il ripristino dei timer.',
+            confirmButtonText: 'OK'
+        });
+    });
+}
+
+function deleteMonthTimers(clientName, year, month, monthSection) {
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: `Vuoi eliminare tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina!',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Recupera tutti i timer del mese specificato per il cliente
+            db.collection('timeLogs')
+                .where('uid', '==', currentUser.uid)
+                .where('isDeleted', '==', false)
+                .where('clientName', '==', clientName)
+                .get()
+                .then(snapshot => {
+                    const batch = db.batch();
+                    const timerIds = [];
+
+                    snapshot.forEach(doc => {
+                        const logData = doc.data();
+                        const startTime = logData.startTime.toDate();
+                        const timerYear = startTime.getFullYear();
+                        const timerMonth = String(startTime.getMonth() + 1).padStart(2, '0');
+
+                        if (timerYear === parseInt(year) && timerMonth === month) {
+                            const timerRef = db.collection('timeLogs').doc(doc.id);
+                            batch.update(timerRef, {
+                                isDeleted: true,
+                                deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            timerIds.push(doc.id);
+                        }
+                    });
+
+                    batch.commit().then(() => {
+                        // Rimuovi la sezione del mese dall'interfaccia
+                        monthSection.parentNode.removeChild(monthSection);
+
+                        // Salva l'operazione per l'undo
+                        lastOperation = {
+                            action: 'deleteMonth',
+                            clientName: clientName,
+                            year: year,
+                            month: month,
+                            timerIds: timerIds,
+                            monthSection: monthSection
+                        };
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Mese Eliminato',
+                            text: `Tutti i timer del mese di ${getMonthName(parseInt(month))} ${year} per il cliente ${clientName} sono stati eliminati.`,
+                            confirmButtonText: 'OK'
+                        });
+                    }).catch(error => {
+                        console.error('Errore durante l\'eliminazione dei timer del mese:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Errore',
+                            text: 'Si è verificato un errore durante l\'eliminazione dei timer.',
+                            confirmButtonText: 'OK'
+                        });
+                    });
+                }).catch(error => {
+                    console.error('Errore durante il recupero dei timer del mese:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante il recupero dei timer.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+    });
 }
 
 // Funzione per filtrare i timer salvati
