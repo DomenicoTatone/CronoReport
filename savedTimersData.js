@@ -2,8 +2,9 @@
 
 // Funzione per caricare i timer salvati in base ai filtri
 function loadSavedTimers(filters = {}) {
+    // Svuota la lista dei timer salvati
     const savedTimersList = document.getElementById('savedTimersAccordion');
-    savedTimersList.innerHTML = ''; // Svuota la lista
+    savedTimersList.innerHTML = '';
 
     // Definizione della query per ottenere i timer dal database
     let query = db.collection('timeLogs')
@@ -23,6 +24,7 @@ function loadSavedTimers(filters = {}) {
         query = query.where('clientId', '==', filters.clientId);
     }
 
+    // Ordina i timer per data di inizio in ordine decrescente
     query.orderBy('startTime', 'desc').get()
         .then(snapshot => {
             displayedTimers = []; // Reset della lista dei timer visualizzati
@@ -34,41 +36,8 @@ function loadSavedTimers(filters = {}) {
                 return;
             }
 
-            // Organizzazione dei timer per cliente, anno, mese e giorno
-            const timersByClient = {};
-
             snapshot.forEach(doc => {
                 const logData = doc.data();
-                const clientName = logData.clientName || 'Cliente Sconosciuto';
-
-                // Ottieni la data di inizio del timer
-                const startTime = logData.startTime.toDate();
-
-                // Ottieni l'anno, il mese e il giorno
-                const year = startTime.getFullYear();
-                const month = String(startTime.getMonth() + 1).padStart(2, '0'); // Mese con zero iniziale
-                const day = String(startTime.getDate()).padStart(2, '0');
-
-                if (!timersByClient[clientName]) {
-                    timersByClient[clientName] = {};
-                }
-
-                if (!timersByClient[clientName][year]) {
-                    timersByClient[clientName][year] = {};
-                }
-
-                if (!timersByClient[clientName][year][month]) {
-                    timersByClient[clientName][year][month] = {};
-                }
-
-                if (!timersByClient[clientName][year][month][day]) {
-                    timersByClient[clientName][year][month][day] = [];
-                }
-
-                timersByClient[clientName][year][month][day].push({
-                    id: doc.id,
-                    data: logData
-                });
 
                 // Aggiungi il timer all'array dei timer visualizzati
                 displayedTimers.push({
@@ -77,8 +46,8 @@ function loadSavedTimers(filters = {}) {
                 });
             });
 
-            // Generazione dell'HTML per visualizzare i timer raggruppati
-            displayTimers(displayedTimers, timersByClient);
+            // Chiamata alla funzione displayTimers con displayedTimers
+            displayTimers(displayedTimers);
         })
         .catch(error => {
             console.error('Errore nel caricamento dei timer salvati:', error);
@@ -86,7 +55,7 @@ function loadSavedTimers(filters = {}) {
 }
 
 // Funzione per visualizzare i timer
-function displayTimers(timers, timersByClient) {
+function displayTimers(timers) {
     const savedTimersList = document.getElementById('savedTimersAccordion');
     savedTimersList.innerHTML = ''; // Svuota la lista
 
@@ -96,6 +65,40 @@ function displayTimers(timers, timersByClient) {
         savedTimersList.appendChild(noTimersMessage);
         return;
     }
+
+    // Organizzazione dei timer per cliente, anno, mese e giorno
+    const timersByClient = {};
+
+    timers.forEach(timerObj => {
+        const logData = timerObj.data;
+        const clientName = logData.clientName || 'Cliente Sconosciuto';
+
+        // Ottieni la data di inizio del timer
+        const startTime = logData.startTime.toDate();
+
+        // Ottieni l'anno, il mese e il giorno
+        const year = startTime.getFullYear();
+        const month = String(startTime.getMonth() + 1).padStart(2, '0'); // Mese con zero iniziale
+        const day = String(startTime.getDate()).padStart(2, '0');
+
+        if (!timersByClient[clientName]) {
+            timersByClient[clientName] = {};
+        }
+
+        if (!timersByClient[clientName][year]) {
+            timersByClient[clientName][year] = {};
+        }
+
+        if (!timersByClient[clientName][year][month]) {
+            timersByClient[clientName][year][month] = {};
+        }
+
+        if (!timersByClient[clientName][year][month][day]) {
+            timersByClient[clientName][year][month][day] = [];
+        }
+
+        timersByClient[clientName][year][month][day].push(timerObj);
+    });
 
     // Generazione dell'HTML per visualizzare i timer raggruppati
     let clientIndex = 0;
@@ -341,6 +344,7 @@ function displayTimers(timers, timersByClient) {
 
                     const dayTimers = days[day];
 
+                    // Ordina i timer per orario di inizio decrescente
                     dayTimers.sort((a, b) => b.data.startTime.seconds - a.data.startTime.seconds);
 
                     dayTimers.forEach(timerObj => {

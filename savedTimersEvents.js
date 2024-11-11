@@ -144,14 +144,19 @@ function filterDisplayedTimers(searchTerm) {
         // Filtra displayedTimers in base al termine di ricerca
         const filteredTimers = displayedTimers.filter(timerObj => {
             const logData = timerObj.data;
+            const searchLower = searchTerm.toLowerCase();
+
             // Controlla se uno dei campi contiene il termine di ricerca
-            return (logData.clientName && logData.clientName.toLowerCase().includes(searchTerm)) ||
-                   (logData.siteName && logData.siteName.toLowerCase().includes(searchTerm)) ||
-                   (logData.worktypeName && logData.worktypeName.toLowerCase().includes(searchTerm)) ||
-                   (logData.link && logData.link.toLowerCase().includes(searchTerm)) ||
-                   (formatDateTime(logData.startTime).toLowerCase().includes(searchTerm)) ||
-                   (formatDateTime(logData.endTime).toLowerCase().includes(searchTerm));
+            return (
+                (logData.clientName && logData.clientName.toLowerCase().includes(searchLower)) ||
+                (logData.siteName && logData.siteName.toLowerCase().includes(searchLower)) ||
+                (logData.worktypeName && logData.worktypeName.toLowerCase().includes(searchLower)) ||
+                (logData.link && logData.link.toLowerCase().includes(searchLower)) ||
+                (formatDateTime(logData.startTime).toLowerCase().includes(searchLower)) ||
+                (formatDateTime(logData.endTime).toLowerCase().includes(searchLower))
+            );
         });
+
         // Mostra i timer filtrati
         displayTimers(filteredTimers);
     }
