@@ -329,7 +329,7 @@ function displayTimers(timers) {
                     dayButton.setAttribute('aria-controls', `collapse-${dayId}`);
 
                     // Formatta il nome del giorno
-                    const dayName = `Giorno ${day}`;
+                    const dayName = `${day}`;
 
                     dayButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${dayName}`;
 
