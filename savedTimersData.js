@@ -872,22 +872,20 @@ function deleteYearTimers(clientName, year, yearSection) {
     });
 }
 
-// Funzione per caricare i clienti nel menu a tendina dei filtri
+// Funzione per caricare i clienti nel filtro
 function loadClientsForFilter() {
-    const clientSelect = document.getElementById('filter-client');
-    clientSelect.innerHTML = '<option value="">Tutti i Clienti</option>';
-
-    db.collection('clients')
+    const filterClientSelect = document.getElementById('filter-client');
+    return db.collection('clients')
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
         .get()
         .then(snapshot => {
             snapshot.forEach(doc => {
-                const client = doc.data();
+                const clientData = doc.data();
                 const option = document.createElement('option');
                 option.value = doc.id;
-                option.textContent = client.name;
-                clientSelect.appendChild(option);
+                option.textContent = clientData.name;
+                filterClientSelect.appendChild(option);
             });
         })
         .catch(error => {
@@ -897,21 +895,13 @@ function loadClientsForFilter() {
 
 // Funzione per ottenere i filtri correnti
 function getCurrentFilters() {
-    const startDate = document.getElementById('filter-date-start').value;
-    const endDate = document.getElementById('filter-date-end').value;
-    const clientId = document.getElementById('filter-client').value;
+    const filterDateStart = document.getElementById('filter-date-start').value;
+    const filterDateEnd = document.getElementById('filter-date-end').value;
+    const filterClient = document.getElementById('filter-client').value;
 
-    const filters = {};
-
-    if (startDate) {
-        filters.startDate = startDate;
-    }
-    if (endDate) {
-        filters.endDate = endDate;
-    }
-    if (clientId) {
-        filters.clientId = clientId;
-    }
-
-    return filters;
+    return {
+        dateStart: filterDateStart,
+        dateEnd: filterDateEnd,
+        client: filterClient
+    };
 }

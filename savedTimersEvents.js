@@ -3,9 +3,10 @@
 // Variabili globali
 let displayedTimers = []; // Array per memorizzare i timer visualizzati
 let lastOperation = null;
+let worktypeRates = {}; // Definiamo la variabile worktypeRates
 
 // Funzione per inizializzare la sezione Timer Salvati
-function initializeSavedTimersEvents() {
+async function initializeSavedTimersEvents() {
     const savedTimersList = document.getElementById('savedTimersAccordion');
     const filterTimersBtn = document.getElementById('filter-timers-btn');
     const unmarkActionSelect = document.getElementById('unmark-action-select');
@@ -22,7 +23,7 @@ function initializeSavedTimersEvents() {
     if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
 
     // Verifica se il client delle Google API è già inizializzato
-    if (gapiInited && gisInited) {
+    if (typeof gapiInited !== 'undefined' && typeof gisInited !== 'undefined' && gapiInited && gisInited) {
         // Abilita i pulsanti di esportazione
         if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
         if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
@@ -40,7 +41,10 @@ function initializeSavedTimersEvents() {
     }
 
     // Carica i clienti nel filtro
-    loadClientsForFilter();
+    await loadClientsForFilter();
+
+    // Carica le tariffe dei tipi di lavoro
+    await loadWorktypeRates();
 
     // Event listeners per i pulsanti di azione
     if (filterTimersBtn) {
@@ -83,7 +87,7 @@ function initializeSavedTimersEvents() {
                 });
                 return;
             }
-    
+
             switch (lastOperation.action) {
                 case 'delete':
                     undoDeleteTimer(lastOperation.timerId);
@@ -108,7 +112,7 @@ function initializeSavedTimersEvents() {
             }
         });
     }
-    
+
     // Event listener per la ricerca
     if (searchTimersInput) {
         searchTimersInput.addEventListener('input', () => {
@@ -131,7 +135,24 @@ function initializeSavedTimersEvents() {
     }
 
     // Carica tutti i timer salvati inizialmente
-    loadSavedTimers();
+    await loadSavedTimers();
+}
+
+// Funzione per caricare le tariffe dei tipi di lavoro
+function loadWorktypeRates() {
+    return db.collection('worktypes')
+        .where('uid', '==', currentUser.uid)
+        .get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const worktypeData = doc.data();
+                worktypeRates[doc.id] = worktypeData.hourlyRate || 0;
+            });
+            return worktypeRates; // Ritorna worktypeRates se necessario
+        })
+        .catch(error => {
+            console.error('Errore nel caricamento delle tariffe dei tipi di lavoro:', error);
+        });
 }
 
 function undoDeleteYear(operation) {
