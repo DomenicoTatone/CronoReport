@@ -568,3 +568,116 @@ function undoDeleteTimer(timerId) {
         });
     });
 }
+
+// Funzione per eliminare definitivamente tutti i timer di un cliente
+function permanentlyDeleteClientTimers(clientName, clientSection) {
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', true)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            return batch.commit();
+        })
+        .then(() => {
+            clientSection.remove();
+            Swal.fire({
+                icon: 'success',
+                title: 'Timer Eliminati',
+                text: `Tutti i timer del cliente "${clientName}" sono stati eliminati definitivamente.`,
+                confirmButtonText: 'OK'
+            });
+        })
+        .catch(error => {
+            console.error('Errore durante l\'eliminazione dei timer del cliente:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante l\'eliminazione dei timer.',
+                confirmButtonText: 'OK'
+            });
+        });
+}
+
+// Funzione per eliminare definitivamente tutti i timer di un anno per un cliente
+function permanentlyDeleteYearTimers(clientName, year, yearSection) {
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', true)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                const logData = doc.data();
+                const deletedAt = logData.deletedAt ? logData.deletedAt.toDate() : logData.startTime.toDate();
+                const timerYear = deletedAt.getFullYear();
+                if (timerYear === parseInt(year)) {
+                    batch.delete(doc.ref);
+                }
+            });
+            return batch.commit();
+        })
+        .then(() => {
+            yearSection.remove();
+            Swal.fire({
+                icon: 'success',
+                title: 'Timer Eliminati',
+                text: `Tutti i timer dell'anno "${year}" per il cliente "${clientName}" sono stati eliminati definitivamente.`,
+                confirmButtonText: 'OK'
+            });
+        })
+        .catch(error => {
+            console.error('Errore durante l\'eliminazione dei timer dell\'anno:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante l\'eliminazione dei timer.',
+                confirmButtonText: 'OK'
+            });
+        });
+}
+
+// Funzione per eliminare definitivamente tutti i timer di un mese specifico per un cliente in un anno
+function permanentlyDeleteMonthTimers(clientName, year, month, monthSection) {
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', true)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                const logData = doc.data();
+                const deletedAt = logData.deletedAt ? logData.deletedAt.toDate() : logData.startTime.toDate();
+                const timerYear = deletedAt.getFullYear();
+                const timerMonth = String(deletedAt.getMonth() + 1).padStart(2, '0');
+                if (timerYear === parseInt(year) && timerMonth === month) {
+                    batch.delete(doc.ref);
+                }
+            });
+            return batch.commit();
+        })
+        .then(() => {
+            monthSection.remove();
+            Swal.fire({
+                icon: 'success',
+                title: 'Timer Eliminati',
+                text: `Tutti i timer del mese "${getMonthName(parseInt(month))}" dell'anno "${year}" per il cliente "${clientName}" sono stati eliminati definitivamente.`,
+                confirmButtonText: 'OK'
+            });
+        })
+        .catch(error => {
+            console.error('Errore durante l\'eliminazione dei timer del mese:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante l\'eliminazione dei timer.',
+                confirmButtonText: 'OK'
+            });
+        });
+}
