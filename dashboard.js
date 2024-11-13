@@ -5,6 +5,9 @@ let dashboardUnsubscribe = null;
 // Variabile per memorizzare la modalità di visualizzazione selezionata per il grafico dei guadagni
 let earningsChartViewMode = 'combined'; // Valori possibili: 'combined', 'perClient'
 
+// Numero massimo di punti dati da visualizzare nei grafici
+const MAX_DATA_POINTS = 60;
+
 // Template per la sezione Dashboard
 const dashboardTemplate = `
 <div id="dashboard-section" class="container mt-5 custom-container">
@@ -134,64 +137,72 @@ function initializeDashboardEvents() {
     });
 
     // Carica i dati iniziali della dashboard
-    setDefaultDateFiltersAndLoadData();
+    setDynamicDateFiltersAndLoadData();
 }
 
 /**
- * Funzione per impostare i filtri di data di default e caricare i dati
+ * Funzione per impostare i filtri di data in base alla quantità di dati da visualizzare
  */
-async function setDefaultDateFiltersAndLoadData() {
+async function setDynamicDateFiltersAndLoadData() {
     // Ottieni gli input delle date
     const endDateInput = document.getElementById('dashboard-filter-date-end');
     const startDateInput = document.getElementById('dashboard-filter-date-start');
 
-    // Ottieni la data dell'ultimo timeLog
     try {
+        // Ottieni gli ultimi timeLogs fino al massimo specificato
         const timeLogsSnapshot = await db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
-            .orderBy('endTime', 'desc')
-            .limit(1)
+            .where('isDeleted', '==', false)
+            .orderBy('startTime', 'desc')
+            .limit(MAX_DATA_POINTS)
             .get();
 
-        let endDate;
         if (!timeLogsSnapshot.empty) {
-            const latestTimeLog = timeLogsSnapshot.docs[0].data();
-            endDate = latestTimeLog.endTime.toDate();
+            const allTimeLogs = timeLogsSnapshot.docs.map(doc => doc.data());
+
+            let endDate = allTimeLogs[0].endTime.toDate();
+            let startDate = allTimeLogs[allTimeLogs.length - 1].startTime.toDate();
+
+            const currentDate = new Date();
+
+            // Assicura che la data di fine non sia nel futuro
+            if (endDate > currentDate) {
+                endDate = currentDate;
+            }
+
+            // Se l'intervallo è minore di un mese, estendi a un mese
+            const oneMonthAgo = new Date(endDate);
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+            if (startDate > oneMonthAgo) {
+                startDate = oneMonthAgo;
+            }
+
+            // Imposta i valori degli input
+            endDateInput.value = endDate.toISOString().split('T')[0];
+            startDateInput.value = startDate.toISOString().split('T')[0];
+
+            // Carica i dati con i filtri impostati
+            const filters = getDashboardFilters();
+            loadDashboardData(filters);
         } else {
-            // Se non ci sono timeLogs, usa la data odierna
-            endDate = new Date();
+            // Se non ci sono timeLogs, usa gli ultimi 30 giorni
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            endDateInput.value = endDate.toISOString().split('T')[0];
+            startDateInput.value = startDate.toISOString().split('T')[0];
+
+            const filters = getDashboardFilters();
+            loadDashboardData(filters);
         }
-
-        // Calcola la data di inizio (3 mesi prima)
-        const startDate = new Date(endDate);
-        startDate.setMonth(startDate.getMonth() - 3);
-
-        // Correggi possibili problemi di date non valide
-        if (startDate.getDate() !== endDate.getDate()) {
-            // Imposta il giorno al massimo disponibile nel mese
-            startDate.setDate(0);
-        }
-
-        // Imposta i valori degli input
-        endDateInput.value = endDate.toISOString().split('T')[0];
-        startDateInput.value = startDate.toISOString().split('T')[0];
-
-        // Carica i dati con i filtri impostati
-        const filters = getDashboardFilters();
-        loadDashboardData(filters);
-
     } catch (error) {
-        console.error('Errore nel recuperare la data dell\'ultimo timeLog:', error);
-        // In caso di errore, usa gli ultimi 3 mesi a partire da oggi
+        console.error('Errore nel recuperare i timeLogs:', error);
+        // In caso di errore, usa gli ultimi 30 giorni
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 3);
-
-        // Correggi possibili problemi di date non valide
-        if (startDate.getDate() !== endDate.getDate()) {
-            // Imposta il giorno al massimo disponibile nel mese
-            startDate.setDate(0);
-        }
+        startDate.setDate(startDate.getDate() - 30);
 
         endDateInput.value = endDate.toISOString().split('T')[0];
         startDateInput.value = startDate.toISOString().split('T')[0];
@@ -271,6 +282,9 @@ function loadDashboardData(filters = {}) {
     } else if (filters.endDate) {
         query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
     }
+
+    // Limita il numero massimo di timeLogs da recuperare
+    query = query.orderBy('startTime', 'desc').limit(MAX_DATA_POINTS);
 
     // Annulla l'ascoltatore precedente se esiste
     if (dashboardUnsubscribe) {
