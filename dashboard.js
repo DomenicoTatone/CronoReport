@@ -2,6 +2,9 @@
 
 let dashboardUnsubscribe = null;
 
+// Variabile per memorizzare la modalità di visualizzazione selezionata per il grafico dei guadagni
+let earningsChartViewMode = 'combined'; // Valori possibili: 'combined', 'perClient'
+
 // Template per la sezione Dashboard
 const dashboardTemplate = `
 <div id="dashboard-section" class="container mt-5 custom-container">
@@ -53,8 +56,16 @@ const dashboardTemplate = `
         <div class="col-md-6">
             <!-- Carta per i guadagni totali -->
             <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-euro-sign mr-2"></i>Guadagni Totali</h5>
+                    <!-- Switch per modalità di visualizzazione -->
+                    <div>
+                        <label for="earnings-view-mode" class="font-weight-bold mr-2">Visualizza:</label>
+                        <select id="earnings-view-mode" class="form-control form-control-sm d-inline-block w-auto">
+                            <option value="combined">Combinato</option>
+                            <option value="perClient">Per Cliente</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="card-body">
                     <canvas id="earningsChart"></canvas>
@@ -100,22 +111,94 @@ let clientWorkedTimeChartInstance = null;
  * Funzione per inizializzare gli eventi della Dashboard
  */
 function initializeDashboardEvents() {
-    // Insert the dashboard template into the content section
+    // Inserisci il template della dashboard nella sezione contenuto
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
-    // Load clients for the dashboard filter
+    // Carica i clienti per il filtro
     loadClientsForDashboardFilter();
 
-    // Add event listener to the filter button
+    // Aggiungi listener al pulsante di filtro
     const filterBtn = document.getElementById('dashboard-filter-btn');
     filterBtn.addEventListener('click', () => {
         const filters = getDashboardFilters();
         loadDashboardData(filters);
     });
 
-    // Load the initial dashboard data
-    loadDashboardData();
+    // Aggiungi listener per il cambio di modalità di visualizzazione dei guadagni
+    const earningsViewModeSelect = document.getElementById('earnings-view-mode');
+    earningsViewModeSelect.addEventListener('change', () => {
+        earningsChartViewMode = earningsViewModeSelect.value;
+        const filters = getDashboardFilters();
+        loadDashboardData(filters);
+    });
+
+    // Carica i dati iniziali della dashboard
+    setDefaultDateFiltersAndLoadData();
+}
+
+/**
+ * Funzione per impostare i filtri di data di default e caricare i dati
+ */
+async function setDefaultDateFiltersAndLoadData() {
+    // Ottieni gli input delle date
+    const endDateInput = document.getElementById('dashboard-filter-date-end');
+    const startDateInput = document.getElementById('dashboard-filter-date-start');
+
+    // Ottieni la data dell'ultimo timeLog
+    try {
+        const timeLogsSnapshot = await db.collection('timeLogs')
+            .where('uid', '==', currentUser.uid)
+            .orderBy('endTime', 'desc')
+            .limit(1)
+            .get();
+
+        let endDate;
+        if (!timeLogsSnapshot.empty) {
+            const latestTimeLog = timeLogsSnapshot.docs[0].data();
+            endDate = latestTimeLog.endTime.toDate();
+        } else {
+            // Se non ci sono timeLogs, usa la data odierna
+            endDate = new Date();
+        }
+
+        // Calcola la data di inizio (3 mesi prima)
+        const startDate = new Date(endDate);
+        startDate.setMonth(startDate.getMonth() - 3);
+
+        // Correggi possibili problemi di date non valide
+        if (startDate.getDate() !== endDate.getDate()) {
+            // Imposta il giorno al massimo disponibile nel mese
+            startDate.setDate(0);
+        }
+
+        // Imposta i valori degli input
+        endDateInput.value = endDate.toISOString().split('T')[0];
+        startDateInput.value = startDate.toISOString().split('T')[0];
+
+        // Carica i dati con i filtri impostati
+        const filters = getDashboardFilters();
+        loadDashboardData(filters);
+
+    } catch (error) {
+        console.error('Errore nel recuperare la data dell\'ultimo timeLog:', error);
+        // In caso di errore, usa gli ultimi 3 mesi a partire da oggi
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 3);
+
+        // Correggi possibili problemi di date non valide
+        if (startDate.getDate() !== endDate.getDate()) {
+            // Imposta il giorno al massimo disponibile nel mese
+            startDate.setDate(0);
+        }
+
+        endDateInput.value = endDate.toISOString().split('T')[0];
+        startDateInput.value = startDate.toISOString().split('T')[0];
+
+        const filters = getDashboardFilters();
+        loadDashboardData(filters);
+    }
 }
 
 /**
@@ -178,29 +261,46 @@ function loadDashboardData(filters = {}) {
         query = query.where('clientName', '==', filters.clientName);
     }
 
-    if (filters.startDate) {
+    // Usa le disuguaglianze solo su 'startTime'
+    if (filters.startDate && filters.endDate) {
+        query = query
+            .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate))
+            .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
+    } else if (filters.startDate) {
         query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate));
+    } else if (filters.endDate) {
+        query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
     }
 
-    if (filters.endDate) {
-        query = query.where('endTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
-    }
-
-    // Unsubscribe from the previous listener if it exists
+    // Annulla l'ascoltatore precedente se esiste
     if (dashboardUnsubscribe) {
         dashboardUnsubscribe();
         dashboardUnsubscribe = null;
     }
 
-    // Set up the new listener and store the unsubscribe function
+    // Imposta il nuovo ascoltatore e memorizza la funzione di annullamento
     dashboardUnsubscribe = query.onSnapshot(snapshot => {
-        const timeLogs = snapshot.docs.map(doc => doc.data());
+        let timeLogs = snapshot.docs.map(doc => doc.data());
 
-        // Prepare the charts
-        prepareWorkedTimeChart(timeLogs);
-        prepareEarningsChart(timeLogs);
-        prepareWorktypeDistributionChart(timeLogs);
-        prepareClientWorkedTimeChart(timeLogs);
+        // Applica ulteriori filtri client-side per accuratezza
+        if (filters.startDate || filters.endDate) {
+            timeLogs = timeLogs.filter(log => {
+                const logStartTime = log.startTime.toDate();
+                const logEndTime = log.endTime.toDate();
+
+                // Controlla la sovrapposizione tra il tempo del log e il filtro
+                const filterStart = filters.startDate || new Date(0); // Data minima se non specificata
+                const filterEnd = filters.endDate || new Date(8640000000000000); // Data massima se non specificata
+
+                return logEndTime >= filterStart && logStartTime <= filterEnd;
+            });
+        }
+
+        // Prepara i grafici con i timeLogs filtrati
+        prepareWorkedTimeChart(timeLogs, filters);
+        prepareEarningsChart(timeLogs, filters);
+        prepareWorktypeDistributionChart(timeLogs, filters);
+        prepareClientWorkedTimeChart(timeLogs, filters);
     }, error => {
         console.error('Errore nel caricamento dei dati della dashboard:', error);
         Swal.fire({
@@ -215,7 +315,7 @@ function loadDashboardData(filters = {}) {
 /**
  * Funzione per preparare il grafico del tempo lavorato
  */
-function prepareWorkedTimeChart(timeLogs) {
+function prepareWorkedTimeChart(timeLogs, filters) {
     const canvasElement = document.getElementById('workedTimeChart');
     if (!canvasElement) {
         console.error('Elemento canvas "workedTimeChart" non trovato nel DOM.');
@@ -271,7 +371,7 @@ function prepareWorkedTimeChart(timeLogs) {
 /**
  * Funzione per preparare il grafico dei guadagni totali
  */
-function prepareEarningsChart(timeLogs) {
+function prepareEarningsChart(timeLogs, filters) {
     const canvasElement = document.getElementById('earningsChart');
     if (!canvasElement) {
         console.error('Elemento canvas "earningsChart" non trovato nel DOM.');
@@ -284,53 +384,122 @@ function prepareEarningsChart(timeLogs) {
         earningsChartInstance.destroy();
     }
 
-    const earningsPerDay = {};
+    const clientNames = new Set(timeLogs.map(log => log.clientName));
 
-    timeLogs.forEach(log => {
-        const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
-        const durationInHours = log.duration / 3600;
-        const hourlyRate = log.hourlyRate || 0;
-        const amount = durationInHours * hourlyRate;
+    // Prepara i dati in base alla modalità di visualizzazione selezionata
+    if (filters.clientName || earningsChartViewMode === 'combined' || clientNames.size === 1) {
+        // Visualizzazione combinata o singolo cliente
+        const earningsPerDay = {};
 
-        if (earningsPerDay[date]) {
-            earningsPerDay[date] += amount;
-        } else {
-            earningsPerDay[date] = amount;
-        }
-    });
+        timeLogs.forEach(log => {
+            const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
+            const durationInHours = log.duration / 3600;
+            const hourlyRate = log.hourlyRate || 0;
+            const amount = durationInHours * hourlyRate;
 
-    // Ordina le date in ordine cronologico
-    const labels = Object.keys(earningsPerDay)
-        .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
-    const data = labels.map(label => earningsPerDay[label]);
+            if (earningsPerDay[date]) {
+                earningsPerDay[date] += amount;
+            } else {
+                earningsPerDay[date] = amount;
+            }
+        });
 
-    // Crea il grafico e salva l'istanza
-    earningsChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Guadagni (€)',
+        // Ordina le date in ordine cronologico
+        const labels = Object.keys(earningsPerDay)
+            .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
+        const data = labels.map(label => earningsPerDay[label]);
+
+        // Crea il grafico e salva l'istanza
+        earningsChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Guadagni (€)',
+                    data: data,
+                    backgroundColor: 'rgba(23, 162, 184, 0.6)',
+                    borderColor: 'rgba(23, 162, 184, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Data' } },
+                    y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
+                }
+            }
+        });
+    } else if (earningsChartViewMode === 'perClient') {
+        // Visualizzazione per cliente
+        const earningsPerDayPerClient = {};
+
+        timeLogs.forEach(log => {
+            const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
+            const durationInHours = log.duration / 3600;
+            const hourlyRate = log.hourlyRate || 0;
+            const amount = durationInHours * hourlyRate;
+
+            if (!earningsPerDayPerClient[log.clientName]) {
+                earningsPerDayPerClient[log.clientName] = {};
+            }
+            if (earningsPerDayPerClient[log.clientName][date]) {
+                earningsPerDayPerClient[log.clientName][date] += amount;
+            } else {
+                earningsPerDayPerClient[log.clientName][date] = amount;
+            }
+        });
+
+        // Ottieni tutte le date
+        const allDatesSet = new Set();
+        Object.values(earningsPerDayPerClient).forEach(clientData => {
+            Object.keys(clientData).forEach(date => allDatesSet.add(date));
+        });
+        const labels = Array.from(allDatesSet)
+            .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
+
+        // Prepara i dataset
+        const datasets = [];
+        const colors = ['rgba(23, 162, 184, 1)', 'rgba(220, 53, 69, 1)', 'rgba(255, 193, 7, 1)', 'rgba(40, 167, 69, 1)', 'rgba(102, 16, 242, 1)'];
+
+        let colorIndex = 0;
+        for (const clientName of clientNames) {
+            const clientData = earningsPerDayPerClient[clientName];
+            const data = labels.map(label => clientData[label] || 0);
+            const color = colors[colorIndex % colors.length];
+            colorIndex++;
+
+            datasets.push({
+                label: clientName,
                 data: data,
-                backgroundColor: 'rgba(23, 162, 184, 0.6)',
-                borderColor: 'rgba(23, 162, 184, 1)',
+                backgroundColor: color.replace('1)', '0.6)'),
+                borderColor: color,
                 borderWidth: 2,
                 fill: false
-            }]
-        },
-        options: {
-            scales: {
-                x: { title: { display: true, text: 'Data' } },
-                y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
-            }
+            });
         }
-    });
+
+        // Crea il grafico e salva l'istanza
+        earningsChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Data' } },
+                    y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
+                }
+            }
+        });
+    }
 }
 
 /**
  * Funzione per preparare il grafico della distribuzione dei tipi di lavoro
  */
-function prepareWorktypeDistributionChart(timeLogs) {
+function prepareWorktypeDistributionChart(timeLogs, filters) {
     const canvasElement = document.getElementById('worktypeDistributionChart');
     if (!canvasElement) {
         console.error('Elemento canvas "worktypeDistributionChart" non trovato nel DOM.');
@@ -394,7 +563,7 @@ function prepareWorktypeDistributionChart(timeLogs) {
 /**
  * Funzione per preparare il grafico del tempo lavorato per cliente
  */
-function prepareClientWorkedTimeChart(timeLogs) {
+function prepareClientWorkedTimeChart(timeLogs, filters) {
     const canvasElement = document.getElementById('clientWorkedTimeChart');
     if (!canvasElement) {
         console.error('Elemento canvas "clientWorkedTimeChart" non trovato nel DOM.');

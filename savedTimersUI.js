@@ -202,8 +202,8 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     // Colonna per Orario di Inizio e Fine con formattazione
     const timeCell = document.createElement('td');
     timeCell.innerHTML = `
-        <i class="fas fa-play mr-1 text-success"></i> ${formatDateTime(logData.startTime)}<br>
-        <i class="fas fa-stop mr-1 text-danger"></i> ${formatDateTime(logData.endTime)}
+        <i class="fas fa-play mr-1 text-success"></i> ${formatTimeWithSeconds(logData.startTime)}<br>
+        <i class="fas fa-stop mr-1 text-danger"></i> ${formatTimeWithSeconds(logData.endTime)}
     `;
     row.appendChild(timeCell);
 
@@ -377,6 +377,11 @@ function padZero(num) {
 
 function formatTime(date) {
     return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatTimeWithSeconds(timestamp) {
+    const date = timestamp.toDate();
+    return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function formatDate(date) {
