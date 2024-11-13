@@ -594,7 +594,7 @@ function prepareWorktypeDistributionChart(timeLogs, filters) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Distribuzione Tipi di Lavoro',
+                label: 'Ore Lavorate',
                 data: data,
                 backgroundColor: [
                     'rgba(255, 193, 7, 0.6)',
