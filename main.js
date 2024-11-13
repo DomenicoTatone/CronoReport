@@ -60,12 +60,15 @@ const dataManagementTemplate = `
 
     <div class="row">
         <!-- Gestione Siti -->
-        <div class="col-md-6">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-map-marker-alt mr-2"></i>Gestione Siti</h5>
-                </div>
-                <div class="card-body">
+<div class="col-md-6">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-map-marker-alt mr-2"></i>Gestione Siti</h5>
+            <button id="toggle-site-list-btn" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-list"></i> Mostra/Nascondi Elenco Siti
+            </button>
+        </div>
+        <div class="card-body">
                     <div class="form-group">
                         <label for="select-client-for-site" class="font-weight-bold">Seleziona Cliente:</label>
                         <select id="select-client-for-site" class="form-control">
@@ -80,7 +83,7 @@ const dataManagementTemplate = `
                         </div>
                     </div>
                     <!-- Lista Siti -->
-                    <div id="site-list">
+                    <div id="site-list" style="display: none;">
                         <!-- Siti saranno popolati dinamicamente come sottocategorie dei clienti -->
                     </div>
                 </div>
@@ -88,12 +91,15 @@ const dataManagementTemplate = `
         </div>
 
         <!-- Gestione Tipi di Lavoro -->
-        <div class="col-md-6">
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0"><i class="fas fa-tools mr-2"></i>Gestione Tipi di Lavoro</h5>
-                </div>
-                <div class="card-body">
+<div class="col-md-6">
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-tools mr-2"></i>Gestione Tipi di Lavoro</h5>
+            <button id="toggle-worktype-list-btn" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-list"></i> Mostra/Nascondi Elenco Tipi di Lavoro
+            </button>
+        </div>
+        <div class="card-body">
                     <div class="form-group">
                         <label for="select-client-for-worktype" class="font-weight-bold">Seleziona Cliente:</label>
                         <select id="select-client-for-worktype" class="form-control">
@@ -111,7 +117,7 @@ const dataManagementTemplate = `
                     </div>
                     <button id="add-worktype-btn" class="btn btn-success btn-block"><i class="fas fa-plus"></i> Aggiungi Tipo di Lavoro</button>
                     <!-- Lista Tipi di Lavoro -->
-                    <div id="worktype-list" class="mt-3">
+                    <div id="worktype-list" class="mt-3" style="display: none;">
                         <!-- Tipi di Lavoro saranno popolati dinamicamente come sottocategorie dei clienti -->
                     </div>
                 </div>
@@ -177,7 +183,7 @@ function loadSection(section) {
  * Funzione per inizializzare gli eventi della Gestione Dati
  */
 function initializeDataManagementEvents() {
-    // Elementi DOM
+    // Elementi DOM esistenti
     const addClientBtn = document.getElementById('add-client-btn');
     const newClientName = document.getElementById('new-client-name');
 
@@ -189,16 +195,38 @@ function initializeDataManagementEvents() {
     const newWorktypeName = document.getElementById('new-worktype-name');
     const selectClientForWorktype = document.getElementById('select-client-for-worktype');
 
-    // **Aggiungi questo codice**
+    // Pulsanti di toggle
     const toggleClientListBtn = document.getElementById('toggle-client-list-btn');
+    const toggleSiteListBtn = document.getElementById('toggle-site-list-btn');
+    const toggleWorktypeListBtn = document.getElementById('toggle-worktype-list-btn');
 
-    // Aggiungi l'event listener per il pulsante di toggle
+    // Event listener per il pulsante di toggle dei Clienti
     toggleClientListBtn.addEventListener('click', function () {
         const clientList = document.getElementById('client-list');
         if (clientList.style.display === 'none' || clientList.style.display === '') {
             clientList.style.display = 'block';
         } else {
             clientList.style.display = 'none';
+        }
+    });
+
+    // **Event listener per il pulsante di toggle dei Siti**
+    toggleSiteListBtn.addEventListener('click', function () {
+        const siteListDiv = document.getElementById('site-list');
+        if (siteListDiv.style.display === 'none' || siteListDiv.style.display === '') {
+            siteListDiv.style.display = 'block';
+        } else {
+            siteListDiv.style.display = 'none';
+        }
+    });
+
+    // **Event listener per il pulsante di toggle dei Tipi di Lavoro**
+    toggleWorktypeListBtn.addEventListener('click', function () {
+        const worktypeListDiv = document.getElementById('worktype-list');
+        if (worktypeListDiv.style.display === 'none' || worktypeListDiv.style.display === '') {
+            worktypeListDiv.style.display = 'block';
+        } else {
+            worktypeListDiv.style.display = 'none';
         }
     });
 
@@ -253,7 +281,6 @@ function initializeDataManagementEvents() {
             showAlert('warning', 'Attenzione', 'Inserisci un nome valido e una tariffa oraria valida per il tipo di lavoro.');
         }
     });
-
 }
 
 /**
@@ -490,16 +517,31 @@ function loadSites(selectElement = null, clientId = null) {
                 clientSnapshot.forEach(clientDoc => {
                     const clientData = clientDoc.data();
                     const clientId = clientDoc.id;
-    
-                    // Crea l'header per il Cliente
+        
+                    // Crea un div per la sezione del cliente
+                    const clientSectionDiv = document.createElement('div');
+                    clientSectionDiv.classList.add('mb-3');
+        
+                    // Crea l'header per il Cliente con un pulsante di toggle
+                    const clientHeaderDiv = document.createElement('div');
+                    clientHeaderDiv.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+        
                     const clientHeader = document.createElement('h5');
                     clientHeader.textContent = clientData.name;
                     clientHeader.classList.add('mt-3');
-    
+        
+                    const toggleSitesBtn = document.createElement('button');
+                    toggleSitesBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
+                    toggleSitesBtn.innerHTML = '<i class="fas fa-eye"></i> Mostra/Nascondi Siti';
+        
+                    clientHeaderDiv.appendChild(clientHeader);
+                    clientHeaderDiv.appendChild(toggleSitesBtn);
+        
                     // Crea la lista dei Siti per questo Cliente
                     const siteUl = document.createElement('ul');
                     siteUl.classList.add('list-group');
-    
+                    siteUl.style.display = 'none'; // Nasconde i siti inizialmente
+        
                     db.collection('sites')
                         .where('uid', '==', currentUser.uid)
                         .where('clientId', '==', clientId)
@@ -516,15 +558,15 @@ function loadSites(selectElement = null, clientId = null) {
                                     const siteData = siteDoc.data();
                                     const li = document.createElement('li');
                                     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-    
+        
                                     const nameSpan = document.createElement('span');
                                     nameSpan.textContent = siteData.name;
                                     nameSpan.classList.add('flex-grow-1');
-    
+        
                                     const deleteBtn = document.createElement('button');
                                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
                                     deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
-    
+        
                                     deleteBtn.addEventListener('click', () => {
                                         Swal.fire({
                                             title: 'Sei sicuro?',
@@ -553,7 +595,7 @@ function loadSites(selectElement = null, clientId = null) {
                                             }
                                         });
                                     });
-    
+        
                                     li.appendChild(nameSpan);
                                     li.appendChild(deleteBtn);
                                     siteUl.appendChild(li);
@@ -564,10 +606,22 @@ function loadSites(selectElement = null, clientId = null) {
                             console.error('Errore nel caricamento dei siti:', error);
                             showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei siti.');
                         });
-    
-                    // Aggiungi l'header e la lista al div principale
-                    siteListDiv.appendChild(clientHeader);
-                    siteListDiv.appendChild(siteUl);
+        
+                    // Aggiungi l'event listener per il pulsante di toggle
+                    toggleSitesBtn.addEventListener('click', () => {
+                        if (siteUl.style.display === 'none' || siteUl.style.display === '') {
+                            siteUl.style.display = 'block';
+                        } else {
+                            siteUl.style.display = 'none';
+                        }
+                    });
+        
+                    // Aggiungi l'header del cliente e la lista dei siti al div della sezione
+                    clientSectionDiv.appendChild(clientHeaderDiv);
+                    clientSectionDiv.appendChild(siteUl);
+        
+                    // Aggiungi il div della sezione cliente al div principale
+                    siteListDiv.appendChild(clientSectionDiv);
                 });
             })
             .catch(error => {
@@ -615,16 +669,31 @@ function loadWorktypes(selectElement = null, clientId = null) {
                 clientSnapshot.forEach(clientDoc => {
                     const clientData = clientDoc.data();
                     const clientId = clientDoc.id;
-    
-                    // Crea l'header per il Cliente
+        
+                    // Crea un div per la sezione del cliente
+                    const clientSectionDiv = document.createElement('div');
+                    clientSectionDiv.classList.add('mb-3');
+        
+                    // Crea l'header per il Cliente con un pulsante di toggle
+                    const clientHeaderDiv = document.createElement('div');
+                    clientHeaderDiv.classList.add('d-flex', 'justify-content-between', 'align-items-center');
+        
                     const clientHeader = document.createElement('h5');
                     clientHeader.textContent = clientData.name;
                     clientHeader.classList.add('mt-3');
-    
+        
+                    const toggleWorktypesBtn = document.createElement('button');
+                    toggleWorktypesBtn.classList.add('btn', 'btn-sm', 'btn-outline-secondary');
+                    toggleWorktypesBtn.innerHTML = '<i class="fas fa-eye"></i> Mostra/Nascondi Tipi di Lavoro';
+        
+                    clientHeaderDiv.appendChild(clientHeader);
+                    clientHeaderDiv.appendChild(toggleWorktypesBtn);
+        
                     // Crea la lista dei Tipi di Lavoro per questo Cliente
                     const worktypeUl = document.createElement('ul');
                     worktypeUl.classList.add('list-group');
-    
+                    worktypeUl.style.display = 'none'; // Nasconde i tipi di lavoro inizialmente
+        
                     db.collection('worktypes')
                         .where('uid', '==', currentUser.uid)
                         .where('clientId', '==', clientId)
@@ -641,15 +710,15 @@ function loadWorktypes(selectElement = null, clientId = null) {
                                     const worktypeData = worktypeDoc.data();
                                     const li = document.createElement('li');
                                     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-    
+        
                                     const nameSpan = document.createElement('span');
                                     nameSpan.textContent = `${worktypeData.name} (Tariffa Oraria: ${worktypeData.hourlyRate || 0} €)`;
                                     nameSpan.classList.add('flex-grow-1');
-    
+        
                                     const deleteBtn = document.createElement('button');
                                     deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
                                     deleteBtn.classList.add('btn', 'btn-sm', 'p-1');
-    
+        
                                     deleteBtn.addEventListener('click', () => {
                                         Swal.fire({
                                             title: 'Sei sicuro?',
@@ -678,7 +747,7 @@ function loadWorktypes(selectElement = null, clientId = null) {
                                             }
                                         });
                                     });
-    
+        
                                     li.appendChild(nameSpan);
                                     li.appendChild(deleteBtn);
                                     worktypeUl.appendChild(li);
@@ -689,10 +758,22 @@ function loadWorktypes(selectElement = null, clientId = null) {
                             console.error('Errore nel caricamento dei tipi di lavoro:', error);
                             showAlert('error', 'Errore', 'Si è verificato un errore durante il caricamento dei tipi di lavoro.');
                         });
-    
-                    // Aggiungi l'header e la lista al div principale
-                    worktypeListDiv.appendChild(clientHeader);
-                    worktypeListDiv.appendChild(worktypeUl);
+        
+                    // Aggiungi l'event listener per il pulsante di toggle
+                    toggleWorktypesBtn.addEventListener('click', () => {
+                        if (worktypeUl.style.display === 'none' || worktypeUl.style.display === '') {
+                            worktypeUl.style.display = 'block';
+                        } else {
+                            worktypeUl.style.display = 'none';
+                        }
+                    });
+        
+                    // Aggiungi l'header del cliente e la lista dei tipi di lavoro al div della sezione
+                    clientSectionDiv.appendChild(clientHeaderDiv);
+                    clientSectionDiv.appendChild(worktypeUl);
+        
+                    // Aggiungi il div della sezione cliente al div principale
+                    worktypeListDiv.appendChild(clientSectionDiv);
                 });
             })
             .catch(error => {
