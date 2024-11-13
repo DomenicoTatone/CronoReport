@@ -181,7 +181,7 @@ function loadRecycleBinReports(searchTerm = '') {
                 // Pulsante per Eliminare Cliente
                 const deleteClientBtn = document.createElement('button');
                 deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
-                deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Cliente';
+                deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Tutto';
                 deleteClientBtn.addEventListener('click', () => {
                     Swal.fire({
                         title: 'Sei sicuro?',

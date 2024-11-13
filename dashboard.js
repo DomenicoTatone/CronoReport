@@ -5,8 +5,8 @@ let dashboardUnsubscribe = null;
 // Variabile per memorizzare la modalità di visualizzazione selezionata per il grafico dei guadagni
 let earningsChartViewMode = 'combined'; // Valori possibili: 'combined', 'perClient'
 
-// Numero massimo di punti dati da visualizzare nei grafici
-const MAX_DATA_POINTS = 60;
+// Numero massimo di timeLogs totali da recuperare
+const MAX_TOTAL_TIMELOGS = 500;
 
 // Template per la sezione Dashboard
 const dashboardTemplate = `
@@ -21,19 +21,28 @@ const dashboardTemplate = `
         </div>
         <div class="card-body">
             <form id="dashboard-filter-form" class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="dashboard-filter-date-start" class="font-weight-bold">Data Inizio:</label>
                     <input type="date" id="dashboard-filter-date-start" class="form-control">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="dashboard-filter-date-end" class="font-weight-bold">Data Fine:</label>
                     <input type="date" id="dashboard-filter-date-end" class="form-control">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="dashboard-filter-client" class="font-weight-bold">Cliente:</label>
                     <select id="dashboard-filter-client" class="form-control">
                         <option value="">Tutti i Clienti</option>
                     </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="dashboard-filter-max-timelogs" class="font-weight-bold">
+                        Max TimeLogs per Cliente 
+                        <span id="max-timelogs-info" class="text-primary" data-toggle="tooltip" data-placement="top" title="Facoltativo ma consigliato. Imposta il numero massimo di timeLogs per cliente da visualizzare.">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                    </label>
+                    <input type="number" id="dashboard-filter-max-timelogs" class="form-control" placeholder="Es. 50" value="30">
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <button id="dashboard-filter-btn" type="button" class="btn btn-primary btn-block mt-2">
@@ -118,6 +127,11 @@ function initializeDashboardEvents() {
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
+    // Inizializza i tooltip (richiede Bootstrap)
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+
     // Carica i clienti per il filtro
     loadClientsForDashboardFilter();
 
@@ -154,7 +168,7 @@ async function setDynamicDateFiltersAndLoadData() {
             .where('uid', '==', currentUser.uid)
             .where('isDeleted', '==', false)
             .orderBy('startTime', 'desc')
-            .limit(MAX_DATA_POINTS)
+            .limit(MAX_TOTAL_TIMELOGS)
             .get();
 
         if (!timeLogsSnapshot.empty) {
@@ -244,6 +258,7 @@ function getDashboardFilters() {
     const startDate = document.getElementById('dashboard-filter-date-start').value;
     const endDate = document.getElementById('dashboard-filter-date-end').value;
     const clientName = document.getElementById('dashboard-filter-client').value;
+    const maxTimeLogsPerClientInput = document.getElementById('dashboard-filter-max-timelogs');
 
     const filters = {};
 
@@ -255,6 +270,12 @@ function getDashboardFilters() {
     }
     if (clientName) {
         filters.clientName = clientName;
+    }
+    if (maxTimeLogsPerClientInput.value) {
+        filters.maxTimeLogsPerClient = parseInt(maxTimeLogsPerClientInput.value);
+    } else {
+        // Se l'utente non ha inserito un valore, utilizza il valore predefinito di 30
+        filters.maxTimeLogsPerClient = 30;
     }
 
     return filters;
@@ -283,8 +304,8 @@ function loadDashboardData(filters = {}) {
         query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
     }
 
-    // Limita il numero massimo di timeLogs da recuperare
-    query = query.orderBy('startTime', 'desc').limit(MAX_DATA_POINTS);
+    // Limita il numero massimo di timeLogs totali da recuperare
+    query = query.orderBy('startTime', 'desc').limit(MAX_TOTAL_TIMELOGS);
 
     // Annulla l'ascoltatore precedente se esiste
     if (dashboardUnsubscribe) {
@@ -310,7 +331,31 @@ function loadDashboardData(filters = {}) {
             });
         }
 
-        // Prepara i grafici con i timeLogs filtrati
+        // Raggruppa i timeLogs per cliente
+        const timeLogsByClient = {};
+
+        timeLogs.forEach(log => {
+            const clientName = log.clientName || 'Sconosciuto';
+            if (!timeLogsByClient[clientName]) {
+                timeLogsByClient[clientName] = [];
+            }
+            timeLogsByClient[clientName].push(log);
+        });
+
+        // Limita i timeLogs per cliente se specificato
+        if (filters.maxTimeLogsPerClient) {
+            const maxLogsPerClient = filters.maxTimeLogsPerClient;
+            for (const clientName in timeLogsByClient) {
+                // Ordina i timeLogs per startTime discendente
+                timeLogsByClient[clientName].sort((a, b) => b.startTime.toDate() - a.startTime.toDate());
+                timeLogsByClient[clientName] = timeLogsByClient[clientName].slice(0, maxLogsPerClient);
+            }
+        }
+
+        // Appiattisci i timeLogs in un singolo array
+        timeLogs = [].concat(...Object.values(timeLogsByClient));
+
+        // Continua con la preparazione dei grafici
         prepareWorkedTimeChart(timeLogs, filters);
         prepareEarningsChart(timeLogs, filters);
         prepareWorktypeDistributionChart(timeLogs, filters);
