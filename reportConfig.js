@@ -162,8 +162,9 @@ function clearLogoPreview() {
     previewContainer.innerHTML = '';
 }
 
-// Funzioni per caricare i filtri (da implementare in base alla tua struttura dati)
+// Funzioni per caricare i filtri
 function loadClients(selectElement) {
+    selectElement.innerHTML = '<option value="">Tutti i Clienti</option>';
     db.collection('clients')
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
@@ -182,10 +183,14 @@ function loadClients(selectElement) {
         });
 }
 
-function loadSites(selectElement) {
-    db.collection('sites')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
+function loadSites(selectElement, selectedClientId = null) {
+    selectElement.innerHTML = '<option value="">Tutti i Siti</option>';
+    let query = db.collection('sites')
+        .where('uid', '==', currentUser.uid);
+    if (selectedClientId) {
+        query = query.where('clientId', '==', selectedClientId);
+    }
+    query.orderBy('name')
         .get()
         .then(snapshot => {
             snapshot.forEach(doc => {
@@ -201,10 +206,14 @@ function loadSites(selectElement) {
         });
 }
 
-function loadWorktypes(selectElement) {
-    db.collection('worktypes')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
+function loadWorktypes(selectElement, selectedClientId = null) {
+    selectElement.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
+    let query = db.collection('worktypes')
+        .where('uid', '==', currentUser.uid);
+    if (selectedClientId) {
+        query = query.where('clientId', '==', selectedClientId);
+    }
+    query.orderBy('name')
         .get()
         .then(snapshot => {
             snapshot.forEach(doc => {

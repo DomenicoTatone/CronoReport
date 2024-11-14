@@ -127,31 +127,34 @@ function initializeDashboardEvents() {
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
-    // Inizializza i tooltip (richiede Bootstrap)
-    $(function () {
-        $('[data-toggle="tooltip"]').tooltip();
+    // Utilizza requestAnimationFrame per assicurarti che il DOM sia aggiornato
+    requestAnimationFrame(() => {
+        // Inizializza i tooltip (richiede Bootstrap)
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+
+        // Carica i clienti per il filtro
+        loadClientsForDashboardFilter();
+
+        // Aggiungi listener al pulsante di filtro
+        const filterBtn = document.getElementById('dashboard-filter-btn');
+        filterBtn.addEventListener('click', () => {
+            const filters = getDashboardFilters();
+            loadDashboardData(filters);
+        });
+
+        // Aggiungi listener per il cambio di modalità di visualizzazione dei guadagni
+        const earningsViewModeSelect = document.getElementById('earnings-view-mode');
+        earningsViewModeSelect.addEventListener('change', () => {
+            earningsChartViewMode = earningsViewModeSelect.value;
+            const filters = getDashboardFilters();
+            loadDashboardData(filters);
+        });
+
+        // Carica i dati iniziali della dashboard
+        setDynamicDateFiltersAndLoadData();
     });
-
-    // Carica i clienti per il filtro
-    loadClientsForDashboardFilter();
-
-    // Aggiungi listener al pulsante di filtro
-    const filterBtn = document.getElementById('dashboard-filter-btn');
-    filterBtn.addEventListener('click', () => {
-        const filters = getDashboardFilters();
-        loadDashboardData(filters);
-    });
-
-    // Aggiungi listener per il cambio di modalità di visualizzazione dei guadagni
-    const earningsViewModeSelect = document.getElementById('earnings-view-mode');
-    earningsViewModeSelect.addEventListener('change', () => {
-        earningsChartViewMode = earningsViewModeSelect.value;
-        const filters = getDashboardFilters();
-        loadDashboardData(filters);
-    });
-
-    // Carica i dati iniziali della dashboard
-    setDynamicDateFiltersAndLoadData();
 }
 
 /**
