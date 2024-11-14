@@ -65,20 +65,20 @@ const reportTemplate = `
                         <!-- Filtri per cliente, sito e tipo di lavoro -->
                         <div class="form-group">
                             <label for="filter-client" class="font-weight-bold">Filtra per Cliente:</label>
-                            <select id="filter-client" class="form-control">
-                                <option value="">Tutti i Clienti</option>
+                            <select id="filter-client" class="form-control" required>
+                                <option value="">--Seleziona Cliente--</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-site" class="font-weight-bold">Filtra per Sito:</label>
+                            <label for="filter-site" class="font-weight-bold">Filtra per Sito (opzionale):</label>
                             <select id="filter-site" class="form-control">
-                                <option value="">Tutti i Siti</option>
+                                <option value="">--Seleziona Sito--</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro:</label>
+                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro (opzionale):</label>
                             <select id="filter-worktype" class="form-control">
-                                <option value="">Tutti i Tipi di Lavoro</option>
+                                <option value="">--Seleziona Tipo di Lavoro--</option>
                             </select>
                         </div>
                         <!-- Opzione per includere la Tariffa Oraria -->
@@ -164,8 +164,11 @@ function clearLogoPreview() {
 
 // Funzioni per caricare i filtri
 function loadClients(selectElement) {
-    selectElement.innerHTML = '<option value="">Tutti i Clienti</option>';
-    db.collection('clients')
+    console.log('loadClients called');
+    console.log('db:', db);
+    console.log('currentUser:', currentUser);
+    selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
+    return db.collection('clients')
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
         .get()
@@ -180,52 +183,66 @@ function loadClients(selectElement) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei clienti:', error);
+            // Handle the error but still return a Promise
+            return Promise.reject(error);
         });
 }
 
-function loadSites(selectElement, selectedClientId = null) {
-    selectElement.innerHTML = '<option value="">Tutti i Siti</option>';
+function loadSites(selectElement, selectedClientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
     let query = db.collection('sites')
-        .where('uid', '==', currentUser.uid);
-    if (selectedClientId) {
-        query = query.where('clientId', '==', selectedClientId);
-    }
-    query.orderBy('name')
-        .get()
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', selectedClientId)
+        .orderBy('name');
+
+    return query.get()
         .then(snapshot => {
-            snapshot.forEach(doc => {
-                const site = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = site.name;
-                selectElement.appendChild(option);
-            });
+            if (snapshot.empty) {
+                // Nessun sito disponibile, disabilita il select
+                selectElement.disabled = true;
+            } else {
+                selectElement.disabled = false;
+                snapshot.forEach(doc => {
+                    const site = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = site.name;
+                    selectElement.appendChild(option);
+                });
+            }
         })
         .catch(error => {
             console.error('Errore nel caricamento dei siti:', error);
+            throw error; // Propaga l'errore per gestirlo successivamente
         });
 }
 
-function loadWorktypes(selectElement, selectedClientId = null) {
-    selectElement.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
+function loadWorktypes(selectElement, selectedClientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     let query = db.collection('worktypes')
-        .where('uid', '==', currentUser.uid);
-    if (selectedClientId) {
-        query = query.where('clientId', '==', selectedClientId);
-    }
-    query.orderBy('name')
-        .get()
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', selectedClientId)
+        .orderBy('name');
+
+    return query.get()
         .then(snapshot => {
-            snapshot.forEach(doc => {
-                const worktype = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = worktype.name;
-                selectElement.appendChild(option);
-            });
+            if (snapshot.empty) {
+                // Nessun tipo di lavoro disponibile, disabilita il select
+                selectElement.disabled = true;
+            } else {
+                selectElement.disabled = false;
+                snapshot.forEach(doc => {
+                    const worktype = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = worktype.name;
+                    selectElement.appendChild(option);
+                });
+            }
         })
         .catch(error => {
             console.error('Errore nel caricamento dei tipi di lavoro:', error);
+            throw error; // Propaga l'errore per gestirlo successivamente
         });
 }
 
@@ -268,9 +285,6 @@ function saveReportConfig(config) {
         name: config.name,
         reportHeader: config.reportHeader,
         companyLogoBase64: config.companyLogoBase64,
-        filterClient: config.filterClient,
-        filterSite: config.filterSite,
-        filterWorktype: config.filterWorktype,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
         Swal.fire({
@@ -293,16 +307,14 @@ function saveReportConfig(config) {
 }
 
 // Funzione per applicare una configurazione salvata
-function applySavedConfig(configId) {
+async function applySavedConfig(configId) {
     const config = savedConfigs[configId];
     if (config) {
-        document.getElementById('report-header').value = config.reportHeader;
-        document.getElementById('filter-client').value = config.filterClient || '';
-        document.getElementById('filter-site').value = config.filterSite || '';
-        document.getElementById('filter-worktype').value = config.filterWorktype || '';
-        companyLogoBase64 = config.companyLogoBase64 || '';
 
-        // Mostra l'anteprima del logo
+        document.getElementById('report-header').value = config.reportHeader;
+
+        // Handle the logo
+        companyLogoBase64 = config.companyLogoBase64 || '';
         if (companyLogoBase64) {
             displayLogoPreview(companyLogoBase64);
         } else {
