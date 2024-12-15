@@ -48,6 +48,12 @@ const reportTemplate = `
                             <label for="config-name" class="font-weight-bold">Nome Configurazione (per salvare):</label>
                             <input type="text" id="config-name" class="form-control" placeholder="Inserisci un nome per questa configurazione">
                         </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="only-unreported" class="form-check-input" checked>
+                                <label for="only-unreported" class="form-check-label">Includi solo timer non reportati</label>
+                            </div>
+                        </div>
                     </div>
                     <!-- Colonna Destra -->
                     <div class="col-md-6">
@@ -65,34 +71,27 @@ const reportTemplate = `
                         <!-- Filtri per cliente, sito e tipo di lavoro -->
                         <div class="form-group">
                             <label for="filter-client" class="font-weight-bold">Filtra per Cliente:</label>
-                            <select id="filter-client" class="form-control" required>
-                                <option value="">--Seleziona Cliente--</option>
+                            <select id="filter-client" class="form-control">
+                                <option value="">Tutti i Clienti</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-site" class="font-weight-bold">Filtra per Sito (opzionale):</label>
+                            <label for="filter-site" class="font-weight-bold">Filtra per Sito:</label>
                             <select id="filter-site" class="form-control">
-                                <option value="">--Seleziona Sito--</option>
+                                <option value="">Tutti i Siti</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro (opzionale):</label>
+                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro:</label>
                             <select id="filter-worktype" class="form-control">
-                                <option value="">--Seleziona Tipo di Lavoro--</option>
+                                <option value="">Tutti i Tipi di Lavoro</option>
                             </select>
                         </div>
                         <!-- Opzione per includere la Tariffa Oraria -->
                         <div class="form-group">
                             <div class="form-check">
-                                <input type="checkbox" id="include-hourly-rate" class="form-check-input" checked>
+                                <input type="checkbox" id="include-hourly-rate" class="form-check-input">
                                 <label for="include-hourly-rate" class="form-check-label">Includi Tariffa Oraria nel Report</label>
-                            </div>
-                        </div>
-                        <!-- Nuova opzione per includere solo timer non reportati -->
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input type="checkbox" id="only-unreported" class="form-check-input">
-                                <label for="only-unreported" class="form-check-label">Includi solo timer non reportati</label>
                             </div>
                         </div>
                     </div>
@@ -171,16 +170,8 @@ function clearLogoPreview() {
 
 // Funzioni per caricare i filtri
 function loadClients(selectElement) {
-<<<<<<< HEAD
-    selectElement.innerHTML = '<option value="">Tutti i Clienti</option>';
-    db.collection('clients')
-=======
-    console.log('loadClients called');
-    console.log('db:', db);
-    console.log('currentUser:', currentUser);
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     return db.collection('clients')
->>>>>>> 774c66b36aaf39585c2b54305f7236e0c4b77fc7
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
         .get()
@@ -200,17 +191,6 @@ function loadClients(selectElement) {
         });
 }
 
-<<<<<<< HEAD
-function loadSites(selectElement, selectedClientId = null) {
-    selectElement.innerHTML = '<option value="">Tutti i Siti</option>';
-    let query = db.collection('sites')
-        .where('uid', '==', currentUser.uid);
-    if (selectedClientId) {
-        query = query.where('clientId', '==', selectedClientId);
-    }
-    query.orderBy('name')
-        .get()
-=======
 function loadSites(selectElement, selectedClientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
     let query = db.collection('sites')
@@ -219,7 +199,6 @@ function loadSites(selectElement, selectedClientId) {
         .orderBy('name');
 
     return query.get()
->>>>>>> 774c66b36aaf39585c2b54305f7236e0c4b77fc7
         .then(snapshot => {
             if (snapshot.empty) {
                 // Nessun sito disponibile, disabilita il select
@@ -241,17 +220,6 @@ function loadSites(selectElement, selectedClientId) {
         });
 }
 
-<<<<<<< HEAD
-function loadWorktypes(selectElement, selectedClientId = null) {
-    selectElement.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
-    let query = db.collection('worktypes')
-        .where('uid', '==', currentUser.uid);
-    if (selectedClientId) {
-        query = query.where('clientId', '==', selectedClientId);
-    }
-    query.orderBy('name')
-        .get()
-=======
 function loadWorktypes(selectElement, selectedClientId) {
     selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
     let query = db.collection('worktypes')
@@ -260,7 +228,6 @@ function loadWorktypes(selectElement, selectedClientId) {
         .orderBy('name');
 
     return query.get()
->>>>>>> 774c66b36aaf39585c2b54305f7236e0c4b77fc7
         .then(snapshot => {
             if (snapshot.empty) {
                 // Nessun tipo di lavoro disponibile, disabilita il select
