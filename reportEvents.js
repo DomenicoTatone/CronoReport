@@ -56,7 +56,25 @@ function setupReportSection() {
     const downloadPdfBtn = document.getElementById('download-pdf-btn');
     const startDateInput = document.getElementById('start-date');
     const endDateInput = document.getElementById('end-date');
+    // Selettori per i filtri
+    const filterClientSelect = document.getElementById('filter-client');
+    const filterSiteSelect = document.getElementById('filter-site');
+    const filterWorktypeSelect = document.getElementById('filter-worktype');
 
+    // Carica i clienti
+    loadClients(filterClientSelect);
+
+    // Event listener per il cambio del cliente
+    filterClientSelect.addEventListener('change', () => {
+        const selectedClientId = filterClientSelect.value;
+        if (selectedClientId) {
+            loadSites(filterSiteSelect, selectedClientId);
+            loadWorktypes(filterWorktypeSelect, selectedClientId);
+        } else {
+            filterSiteSelect.innerHTML = '<option value="">Tutti i Siti</option>';
+            filterWorktypeSelect.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
+        }
+    });
     // Inizializza gli elementi DOM per i pulsanti di esportazione Google
     exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
     exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
@@ -88,11 +106,6 @@ function setupReportSection() {
             reader.readAsDataURL(file);
         }
     });
-
-    // Carica i filtri
-    loadClients(document.getElementById('filter-client'));
-    loadSites(document.getElementById('filter-site'));
-    loadWorktypes(document.getElementById('filter-worktype'));
 
     // Carica le configurazioni salvate
     loadSavedConfigs();
@@ -218,6 +231,8 @@ function setupReportSection() {
 
         // Ottieni il valore del checkbox per includere la Tariffa Oraria
         const includeHourlyRate = document.getElementById('include-hourly-rate').checked;
+        // Ottieni il valore del checkbox per includere solo i timer non reportati
+        const onlyUnreported = document.getElementById('only-unreported').checked;
 
         // Validazione avanzata
         let errorMessage = '';
@@ -302,6 +317,9 @@ function setupReportSection() {
         }
         if (filterWorktype) {
             query = query.where('worktypeId', '==', filterWorktype);
+        }
+        if (onlyUnreported) {
+            query = query.where('isReported', '==', false);
         }
 
         query.orderBy('startTime', 'asc')

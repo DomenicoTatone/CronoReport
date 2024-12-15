@@ -12,7 +12,7 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
         console.log("Utente autenticato:", currentUser.uid);
-        // Carica la sezione predefinita
+        // Carica la sezione predefinitaa
         loadSection('data-management');
         // Inizializza i timer solo dopo che l'utente è confermato autenticato
         await initializeTimerEvents();
@@ -231,7 +231,7 @@ function initializeDataManagementEvents() {
     });
 
     // Carica le liste esistenti
-    loadClients(); // Per la lista dei Clienti
+    loadDataManagementClientList(); // Per la lista dei Clienti
     loadClientsForSelect(selectClientForSite); // Per il select dei Clienti nei Siti
     loadClientsForSelect(selectClientForWorktype); // Per il select dei Clienti nei Tipi di Lavoro
     loadSites(); // Per la lista dei Siti
@@ -311,7 +311,7 @@ async function addClient(name) {
         });
         showAlert('success', 'Cliente aggiunto!', `Il cliente "${name}" è stato aggiunto con successo.`);
         document.getElementById('new-client-name').value = '';
-        loadClients();
+        loadDataManagementClientList();
         loadClientsForSelect(document.getElementById('select-client-for-site'));
         loadClientsForSelect(document.getElementById('select-client-for-worktype'));
     } catch (error) {
@@ -395,7 +395,7 @@ function loadClientsForSelect(selectElement) {
  * Funzione per caricare i Clienti nella lista principale
  * @param {HTMLElement|null} selectElement - Elemento select opzionale
  */
-function loadClients(selectElement = null) {
+function loadDataManagementClientList(selectElement = null) {
     if (selectElement) {
         // Popola il menu a tendina
         selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
@@ -455,7 +455,7 @@ function loadClients(selectElement = null) {
                                             'Il cliente è stato eliminato.',
                                             'success'
                                         );
-                                        loadClients();
+                                        loadDataManagementClientList();
                                         loadClientsForSelect(document.getElementById('select-client-for-site'));
                                         loadClientsForSelect(document.getElementById('select-client-for-worktype'));
                                     })

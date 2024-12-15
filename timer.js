@@ -150,7 +150,7 @@ async function initializeTimerEvents() {
     });
 
     // Carica i Clienti
-    loadClients(clientSelect);
+    loadTimerClientDropdown(clientSelect);
 
     // Aggiungi listener per quando il Cliente cambia, per aggiornare Siti e Tipi di Lavoro
     clientSelect.addEventListener('change', () => {
@@ -258,7 +258,7 @@ async function initializeTimerEvents() {
 }
 
 // Funzione per caricare i Clienti nel Dropdown del Timer
-function loadClients(selectElement) {
+function loadTimerClientDropdown(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     db.collection('clients')
         .where('uid', '==', currentUser.uid)

@@ -65,20 +65,20 @@ const reportTemplate = `
                         <!-- Filtri per cliente, sito e tipo di lavoro -->
                         <div class="form-group">
                             <label for="filter-client" class="font-weight-bold">Filtra per Cliente:</label>
-                            <select id="filter-client" class="form-control">
-                                <option value="">Tutti i Clienti</option>
+                            <select id="filter-client" class="form-control" required>
+                                <option value="">--Seleziona Cliente--</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-site" class="font-weight-bold">Filtra per Sito:</label>
+                            <label for="filter-site" class="font-weight-bold">Filtra per Sito (opzionale):</label>
                             <select id="filter-site" class="form-control">
-                                <option value="">Tutti i Siti</option>
+                                <option value="">--Seleziona Sito--</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro:</label>
+                            <label for="filter-worktype" class="font-weight-bold">Filtra per Tipo di Lavoro (opzionale):</label>
                             <select id="filter-worktype" class="form-control">
-                                <option value="">Tutti i Tipi di Lavoro</option>
+                                <option value="">--Seleziona Tipo di Lavoro--</option>
                             </select>
                         </div>
                         <!-- Opzione per includere la Tariffa Oraria -->
@@ -86,6 +86,13 @@ const reportTemplate = `
                             <div class="form-check">
                                 <input type="checkbox" id="include-hourly-rate" class="form-check-input" checked>
                                 <label for="include-hourly-rate" class="form-check-label">Includi Tariffa Oraria nel Report</label>
+                            </div>
+                        </div>
+                        <!-- Nuova opzione per includere solo timer non reportati -->
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="only-unreported" class="form-check-input">
+                                <label for="only-unreported" class="form-check-label">Includi solo timer non reportati</label>
                             </div>
                         </div>
                     </div>
@@ -162,9 +169,18 @@ function clearLogoPreview() {
     previewContainer.innerHTML = '';
 }
 
-// Funzioni per caricare i filtri (da implementare in base alla tua struttura dati)
+// Funzioni per caricare i filtri
 function loadClients(selectElement) {
+<<<<<<< HEAD
+    selectElement.innerHTML = '<option value="">Tutti i Clienti</option>';
     db.collection('clients')
+=======
+    console.log('loadClients called');
+    console.log('db:', db);
+    console.log('currentUser:', currentUser);
+    selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
+    return db.collection('clients')
+>>>>>>> 774c66b36aaf39585c2b54305f7236e0c4b77fc7
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
         .get()
@@ -179,44 +195,90 @@ function loadClients(selectElement) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei clienti:', error);
+            // Handle the error but still return a Promise
+            return Promise.reject(error);
         });
 }
 
-function loadSites(selectElement) {
-    db.collection('sites')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
+<<<<<<< HEAD
+function loadSites(selectElement, selectedClientId = null) {
+    selectElement.innerHTML = '<option value="">Tutti i Siti</option>';
+    let query = db.collection('sites')
+        .where('uid', '==', currentUser.uid);
+    if (selectedClientId) {
+        query = query.where('clientId', '==', selectedClientId);
+    }
+    query.orderBy('name')
         .get()
+=======
+function loadSites(selectElement, selectedClientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    let query = db.collection('sites')
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', selectedClientId)
+        .orderBy('name');
+
+    return query.get()
+>>>>>>> 774c66b36aaf39585c2b54305f7236e0c4b77fc7
         .then(snapshot => {
-            snapshot.forEach(doc => {
-                const site = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = site.name;
-                selectElement.appendChild(option);
-            });
+            if (snapshot.empty) {
+                // Nessun sito disponibile, disabilita il select
+                selectElement.disabled = true;
+            } else {
+                selectElement.disabled = false;
+                snapshot.forEach(doc => {
+                    const site = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = site.name;
+                    selectElement.appendChild(option);
+                });
+            }
         })
         .catch(error => {
             console.error('Errore nel caricamento dei siti:', error);
+            throw error; // Propaga l'errore per gestirlo successivamente
         });
 }
 
-function loadWorktypes(selectElement) {
-    db.collection('worktypes')
-        .where('uid', '==', currentUser.uid)
-        .orderBy('name')
+<<<<<<< HEAD
+function loadWorktypes(selectElement, selectedClientId = null) {
+    selectElement.innerHTML = '<option value="">Tutti i Tipi di Lavoro</option>';
+    let query = db.collection('worktypes')
+        .where('uid', '==', currentUser.uid);
+    if (selectedClientId) {
+        query = query.where('clientId', '==', selectedClientId);
+    }
+    query.orderBy('name')
         .get()
+=======
+function loadWorktypes(selectElement, selectedClientId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
+    let query = db.collection('worktypes')
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', selectedClientId)
+        .orderBy('name');
+
+    return query.get()
+>>>>>>> 774c66b36aaf39585c2b54305f7236e0c4b77fc7
         .then(snapshot => {
-            snapshot.forEach(doc => {
-                const worktype = doc.data();
-                const option = document.createElement('option');
-                option.value = doc.id;
-                option.textContent = worktype.name;
-                selectElement.appendChild(option);
-            });
+            if (snapshot.empty) {
+                // Nessun tipo di lavoro disponibile, disabilita il select
+                selectElement.disabled = true;
+            } else {
+                selectElement.disabled = false;
+                snapshot.forEach(doc => {
+                    const worktype = doc.data();
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = worktype.name;
+                    selectElement.appendChild(option);
+                });
+            }
         })
         .catch(error => {
             console.error('Errore nel caricamento dei tipi di lavoro:', error);
+            throw error; // Propaga l'errore per gestirlo successivamente
         });
 }
 
@@ -259,9 +321,6 @@ function saveReportConfig(config) {
         name: config.name,
         reportHeader: config.reportHeader,
         companyLogoBase64: config.companyLogoBase64,
-        filterClient: config.filterClient,
-        filterSite: config.filterSite,
-        filterWorktype: config.filterWorktype,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
         Swal.fire({
@@ -284,16 +343,14 @@ function saveReportConfig(config) {
 }
 
 // Funzione per applicare una configurazione salvata
-function applySavedConfig(configId) {
+async function applySavedConfig(configId) {
     const config = savedConfigs[configId];
     if (config) {
-        document.getElementById('report-header').value = config.reportHeader;
-        document.getElementById('filter-client').value = config.filterClient || '';
-        document.getElementById('filter-site').value = config.filterSite || '';
-        document.getElementById('filter-worktype').value = config.filterWorktype || '';
-        companyLogoBase64 = config.companyLogoBase64 || '';
 
-        // Mostra l'anteprima del logo
+        document.getElementById('report-header').value = config.reportHeader;
+
+        // Handle the logo
+        companyLogoBase64 = config.companyLogoBase64 || '';
         if (companyLogoBase64) {
             displayLogoPreview(companyLogoBase64);
         } else {
