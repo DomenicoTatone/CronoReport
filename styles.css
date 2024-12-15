@@ -75,11 +75,6 @@ body {
     box-shadow: none;
 }
 
-#worktypeDistributionChart {
-    max-height: 300px; /* Imposta l'altezza massima del grafico */
-    margin: 0 auto; /* Centra il grafico */
-}
-
 .custom-container {
     max-width: 1250px;
     /* Imposta la larghezza massima desiderata */
@@ -137,4 +132,30 @@ body {
 
 .table-warning {
     background-color: #fff3cd;
+}
+
+canvas#worktypeDistributionChart {
+    width: 500px;
+    height: auto;
+    margin: 0 auto;
+}
+
+.chartjs-legend ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap; /* permette di andare a capo */
+}
+
+.chartjs-legend li {
+    margin-right: 15px;
+    margin-bottom: 5px;
+    max-width: 120px; /* larghezza massima per ogni voce */
+}
+
+.chartjs-legend li span {
+    display: inline-block;
+    white-space: normal; /* testo su più linee se necessario */
+    word-wrap: break-word;
 }

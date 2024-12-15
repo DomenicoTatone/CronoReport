@@ -1,14 +1,6 @@
-// dashboard.js
-
-let dashboardUnsubscribe = null;
-
-// Variabile per memorizzare la modalità di visualizzazione selezionata per il grafico dei guadagni
 let earningsChartViewMode = 'combined'; // Valori possibili: 'combined', 'perClient'
-
-// Numero massimo di timeLogs totali da recuperare
 const MAX_TOTAL_TIMELOGS = 500;
 
-// Template per la sezione Dashboard
 const dashboardTemplate = `
 <div id="dashboard-section" class="container mt-5 custom-container">
     <h2 class="mb-5 text-center text-uppercase font-weight-bold">
@@ -38,11 +30,11 @@ const dashboardTemplate = `
                 <div class="col-md-3">
                     <label for="dashboard-filter-max-timelogs" class="font-weight-bold">
                         Max TimeLogs per Cliente 
-                        <span id="max-timelogs-info" class="text-primary" data-toggle="tooltip" data-placement="top" title="Facoltativo ma consigliato. Imposta il numero massimo di timeLogs per cliente da visualizzare.">
+                        <span id="max-timelogs-info" class="text-primary" data-toggle="tooltip" data-placement="top" title="Facoltativo. Imposta il numero massimo di timeLogs per cliente da visualizzare.">
                             <i class="fas fa-info-circle"></i>
                         </span>
                     </label>
-                    <input type="number" id="dashboard-filter-max-timelogs" class="form-control" placeholder="Es. 50" value="30">
+                    <input type="number" id="dashboard-filter-max-timelogs" class="form-control" placeholder="Es. 50" value="150">
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <button id="dashboard-filter-btn" type="button" class="btn btn-primary btn-block mt-2">
@@ -93,8 +85,10 @@ const dashboardTemplate = `
                 <div class="card-header bg-warning text-white">
                     <h5 class="mb-0"><i class="fas fa-chart-pie mr-2"></i>Distribuzione Tipi di Lavoro</h5>
                 </div>
-                <div class="card-body">
-                    <canvas id="worktypeDistributionChart"></canvas>
+                <div class="card-body" style="position:relative; min-height:400px;">
+                    <div style="position: relative; height:100%; width:100%;">
+                        <canvas id="worktypeDistributionChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -113,38 +107,64 @@ const dashboardTemplate = `
 </div>
 `;
 
-// Variabili per mantenere i riferimenti ai grafici
+// Riferimenti ai grafici
 let workedTimeChartInstance = null;
 let earningsChartInstance = null;
 let worktypeDistributionChartInstance = null;
 let clientWorkedTimeChartInstance = null;
 
-/**
- * Funzione per inizializzare gli eventi della Dashboard
- */
+/** Funzione per formattare le ore decimali in hh:mm:ss */
+function formatHoursToHMS(decimalHours) {
+    const totalSeconds = Math.round(decimalHours * 3600);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const hh = hours.toString().padStart(2, '0');
+    const mm = minutes.toString().padStart(2, '0');
+    const ss = seconds.toString().padStart(2, '0');
+
+    return `${hh}:${mm}:${ss}`;
+}
+
+/** Tooltip callback per ore lavorate */
+function hoursTooltipCallback(context) {
+    const rawValue = context.parsed.y; // valore in ore decimali
+    const formatted = formatHoursToHMS(rawValue);
+    return `Ore Lavorate: ${formatted}`;
+}
+
+/** Tooltip callback per ore lavorate su grafico a torta (pie chart) */
+function hoursTooltipPieCallback(context) {
+    const rawValue = context.parsed; // valore in ore decimali
+    const formatted = formatHoursToHMS(rawValue);
+    return `${context.label}: ${formatted}`;
+}
+
+/** Tooltip callback per guadagni in euro */
+function earningsTooltipCallback(context) {
+    const rawValue = context.parsed.y;
+    return `Guadagni: €${rawValue.toFixed(2)}`;
+}
+
 function initializeDashboardEvents() {
-    // Inserisci il template della dashboard nella sezione contenuto
     const contentSection = document.getElementById('content-section');
     contentSection.innerHTML = dashboardTemplate;
 
-    // Utilizza requestAnimationFrame per assicurarti che il DOM sia aggiornato
     requestAnimationFrame(() => {
-        // Inizializza i tooltip (richiede Bootstrap)
+        // Inizializza tooltips Bootstrap
         $(function () {
             $('[data-toggle="tooltip"]').tooltip();
         });
 
-        // Carica i clienti per il filtro
         loadClientsForDashboardFilter();
 
-        // Aggiungi listener al pulsante di filtro
         const filterBtn = document.getElementById('dashboard-filter-btn');
         filterBtn.addEventListener('click', () => {
             const filters = getDashboardFilters();
             loadDashboardData(filters);
         });
 
-        // Aggiungi listener per il cambio di modalità di visualizzazione dei guadagni
         const earningsViewModeSelect = document.getElementById('earnings-view-mode');
         earningsViewModeSelect.addEventListener('change', () => {
             earningsChartViewMode = earningsViewModeSelect.value;
@@ -152,71 +172,51 @@ function initializeDashboardEvents() {
             loadDashboardData(filters);
         });
 
-        // Carica i dati iniziali della dashboard
-        setDynamicDateFiltersAndLoadData();
+        setInitialDateRangeAndLoadData();
     });
 }
 
-/**
- * Funzione per impostare i filtri di data in base alla quantità di dati da visualizzare
- */
-async function setDynamicDateFiltersAndLoadData() {
-    // Ottieni gli input delle date
+/** Imposta l'intervallo di date iniziali e carica i dati */
+async function setInitialDateRangeAndLoadData() {
     const endDateInput = document.getElementById('dashboard-filter-date-end');
     const startDateInput = document.getElementById('dashboard-filter-date-start');
 
     try {
-        // Ottieni gli ultimi timeLogs fino al massimo specificato
-        const timeLogsSnapshot = await db.collection('timeLogs')
+        const snapshot = await db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
             .where('isDeleted', '==', false)
             .orderBy('startTime', 'desc')
             .limit(MAX_TOTAL_TIMELOGS)
             .get();
 
-        if (!timeLogsSnapshot.empty) {
-            const allTimeLogs = timeLogsSnapshot.docs.map(doc => doc.data());
+        let startDate, endDate;
+        const now = new Date();
+        
+        if (!snapshot.empty) {
+            const allLogs = snapshot.docs.map(d => d.data());
+            endDate = allLogs[0].endTime.toDate();
+            if (endDate > now) endDate = now;
 
-            let endDate = allTimeLogs[0].endTime.toDate();
-            let startDate = allTimeLogs[allTimeLogs.length - 1].startTime.toDate();
+            const oneMonthBefore = new Date(endDate);
+            oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
 
-            const currentDate = new Date();
-
-            // Assicura che la data di fine non sia nel futuro
-            if (endDate > currentDate) {
-                endDate = currentDate;
-            }
-
-            // Se l'intervallo è minore di un mese, estendi a un mese
-            const oneMonthAgo = new Date(endDate);
-            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
-            if (startDate > oneMonthAgo) {
-                startDate = oneMonthAgo;
-            }
-
-            // Imposta i valori degli input
-            endDateInput.value = endDate.toISOString().split('T')[0];
-            startDateInput.value = startDate.toISOString().split('T')[0];
-
-            // Carica i dati con i filtri impostati
-            const filters = getDashboardFilters();
-            loadDashboardData(filters);
+            const oldestStart = allLogs[allLogs.length - 1].startTime.toDate();
+            startDate = oldestStart < oneMonthBefore ? oldestStart : oneMonthBefore;
         } else {
-            // Se non ci sono timeLogs, usa gli ultimi 30 giorni
-            const endDate = new Date();
-            const startDate = new Date();
+            // Nessun log, default ultimo 30 giorni
+            endDate = now;
+            startDate = new Date();
             startDate.setDate(startDate.getDate() - 30);
-
-            endDateInput.value = endDate.toISOString().split('T')[0];
-            startDateInput.value = startDate.toISOString().split('T')[0];
-
-            const filters = getDashboardFilters();
-            loadDashboardData(filters);
         }
+
+        endDateInput.value = endDate.toISOString().split('T')[0];
+        startDateInput.value = startDate.toISOString().split('T')[0];
+
+        const filters = getDashboardFilters();
+        loadDashboardData(filters);
     } catch (error) {
         console.error('Errore nel recuperare i timeLogs:', error);
-        // In caso di errore, usa gli ultimi 30 giorni
+        // In caso di errore usa ultimi 30 giorni
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
@@ -229,13 +229,10 @@ async function setDynamicDateFiltersAndLoadData() {
     }
 }
 
-/**
- * Funzione per caricare i clienti nel filtro
- */
+/** Carica i clienti per il filtro */
 function loadClientsForDashboardFilter() {
     const clientSelect = document.getElementById('dashboard-filter-client');
     clientSelect.innerHTML = '<option value="">Tutti i Clienti</option>';
-
     db.collection('clients')
         .where('uid', '==', currentUser.uid)
         .orderBy('name')
@@ -243,127 +240,79 @@ function loadClientsForDashboardFilter() {
         .then(snapshot => {
             snapshot.forEach(doc => {
                 const client = doc.data();
-                const option = document.createElement('option');
-                option.value = client.name; // Usa il nome del cliente per il filtro
-                option.textContent = client.name;
-                clientSelect.appendChild(option);
+                const opt = document.createElement('option');
+                opt.value = client.name;
+                opt.textContent = client.name;
+                clientSelect.appendChild(opt);
             });
         })
-        .catch(error => {
-            console.error('Errore nel caricamento dei clienti per il filtro:', error);
-        });
+        .catch(error => console.error('Errore nel caricamento clienti:', error));
 }
 
-/**
- * Funzione per ottenere i filtri della dashboard
- */
+/** Ottiene i filtri dalla UI */
 function getDashboardFilters() {
-    const startDate = document.getElementById('dashboard-filter-date-start').value;
-    const endDate = document.getElementById('dashboard-filter-date-end').value;
+    const startDateVal = document.getElementById('dashboard-filter-date-start').value;
+    const endDateVal = document.getElementById('dashboard-filter-date-end').value;
     const clientName = document.getElementById('dashboard-filter-client').value;
-    const maxTimeLogsPerClientInput = document.getElementById('dashboard-filter-max-timelogs');
+    const maxLogsVal = document.getElementById('dashboard-filter-max-timelogs').value;
 
     const filters = {};
-
-    if (startDate) {
-        filters.startDate = new Date(startDate + 'T00:00:00');
-    }
-    if (endDate) {
-        filters.endDate = new Date(endDate + 'T23:59:59');
-    }
-    if (clientName) {
-        filters.clientName = clientName;
-    }
-    if (maxTimeLogsPerClientInput.value) {
-        filters.maxTimeLogsPerClient = parseInt(maxTimeLogsPerClientInput.value);
-    } else {
-        // Se l'utente non ha inserito un valore, utilizza il valore predefinito di 30
-        filters.maxTimeLogsPerClient = 30;
-    }
+    if (startDateVal) filters.startDate = new Date(startDateVal + 'T00:00:00');
+    if (endDateVal) filters.endDate = new Date(endDateVal + 'T23:59:59');
+    if (clientName) filters.clientName = clientName;
+    filters.maxTimeLogsPerClient = maxLogsVal ? parseInt(maxLogsVal) : 30;
 
     return filters;
 }
 
-/**
- * Funzione per caricare i dati e generare i grafici
- */
-function loadDashboardData(filters = {}) {
-    let query = db.collection('timeLogs')
-        .where('uid', '==', currentUser.uid)
-        .where('isDeleted', '==', false);
+/** Carica i dati da Firestore e aggiorna i grafici */
+async function loadDashboardData(filters) {
+    try {
+        let query = db.collection('timeLogs')
+            .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false);
 
-    if (filters.clientName) {
-        query = query.where('clientName', '==', filters.clientName);
-    }
-
-    // Usa le disuguaglianze solo su 'startTime'
-    if (filters.startDate && filters.endDate) {
-        query = query
-            .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate))
-            .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
-    } else if (filters.startDate) {
-        query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate));
-    } else if (filters.endDate) {
-        query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
-    }
-
-    // Limita il numero massimo di timeLogs totali da recuperare
-    query = query.orderBy('startTime', 'desc').limit(MAX_TOTAL_TIMELOGS);
-
-    // Annulla l'ascoltatore precedente se esiste
-    if (dashboardUnsubscribe) {
-        dashboardUnsubscribe();
-        dashboardUnsubscribe = null;
-    }
-
-    // Imposta il nuovo ascoltatore e memorizza la funzione di annullamento
-    dashboardUnsubscribe = query.onSnapshot(snapshot => {
-        let timeLogs = snapshot.docs.map(doc => doc.data());
-
-        // Applica ulteriori filtri client-side per accuratezza
-        if (filters.startDate || filters.endDate) {
-            timeLogs = timeLogs.filter(log => {
-                const logStartTime = log.startTime.toDate();
-                const logEndTime = log.endTime.toDate();
-
-                // Controlla la sovrapposizione tra il tempo del log e il filtro
-                const filterStart = filters.startDate || new Date(0); // Data minima se non specificata
-                const filterEnd = filters.endDate || new Date(8640000000000000); // Data massima se non specificata
-
-                return logEndTime >= filterStart && logStartTime <= filterEnd;
-            });
+        if (filters.clientName) {
+            query = query.where('clientName', '==', filters.clientName);
+        }
+        // Filtro date
+        if (filters.startDate) {
+            query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(filters.startDate));
+        }
+        if (filters.endDate) {
+            query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(filters.endDate));
         }
 
-        // Raggruppa i timeLogs per cliente
-        const timeLogsByClient = {};
+        query = query.orderBy('startTime', 'desc').limit(MAX_TOTAL_TIMELOGS);
 
-        timeLogs.forEach(log => {
-            const clientName = log.clientName || 'Sconosciuto';
-            if (!timeLogsByClient[clientName]) {
-                timeLogsByClient[clientName] = [];
-            }
-            timeLogsByClient[clientName].push(log);
+        const snapshot = await query.get();
+        let timeLogs = snapshot.docs.map(d => d.data());
+
+        // Filtraggio client-side (per sicurezza)
+        timeLogs = timeLogs.filter(log => {
+            const logStart = log.startTime.toDate();
+            const logEnd = log.endTime.toDate();
+            const startCond = !filters.startDate || logEnd >= filters.startDate;
+            const endCond = !filters.endDate || logStart <= filters.endDate;
+            return startCond && endCond;
         });
 
-        // Limita i timeLogs per cliente se specificato
-        if (filters.maxTimeLogsPerClient) {
-            const maxLogsPerClient = filters.maxTimeLogsPerClient;
-            for (const clientName in timeLogsByClient) {
-                // Ordina i timeLogs per startTime discendente
-                timeLogsByClient[clientName].sort((a, b) => b.startTime.toDate() - a.startTime.toDate());
-                timeLogsByClient[clientName] = timeLogsByClient[clientName].slice(0, maxLogsPerClient);
-            }
+        // Raggruppa per cliente e limita
+        const timeLogsByClient = {};
+        timeLogs.forEach(log => {
+            const cname = log.clientName || 'Sconosciuto';
+            if (!timeLogsByClient[cname]) timeLogsByClient[cname] = [];
+            timeLogsByClient[cname].push(log);
+        });
+        for (const cname in timeLogsByClient) {
+            timeLogsByClient[cname].sort((a, b) => b.startTime.toDate() - a.startTime.toDate());
+            timeLogsByClient[cname] = timeLogsByClient[cname].slice(0, filters.maxTimeLogsPerClient);
         }
+        timeLogs = Object.values(timeLogsByClient).flat();
 
-        // Appiattisci i timeLogs in un singolo array
-        timeLogs = [].concat(...Object.values(timeLogsByClient));
-
-        // Continua con la preparazione dei grafici
-        prepareWorkedTimeChart(timeLogs, filters);
-        prepareEarningsChart(timeLogs, filters);
-        prepareWorktypeDistributionChart(timeLogs, filters);
-        prepareClientWorkedTimeChart(timeLogs, filters);
-    }, error => {
+        // Aggiorna grafici
+        updateCharts(timeLogs, filters);
+    } catch (error) {
         console.error('Errore nel caricamento dei dati della dashboard:', error);
         Swal.fire({
             icon: 'error',
@@ -371,51 +320,41 @@ function loadDashboardData(filters = {}) {
             text: 'Si è verificato un errore durante il caricamento dei dati della dashboard.',
             confirmButtonText: 'OK'
         });
-    });
+    }
 }
 
-/**
- * Funzione per preparare il grafico del tempo lavorato
- */
-function prepareWorkedTimeChart(timeLogs, filters) {
-    const canvasElement = document.getElementById('workedTimeChart');
-    if (!canvasElement) {
-        console.error('Elemento canvas "workedTimeChart" non trovato nel DOM.');
-        return;
-    }
-    const ctx = canvasElement.getContext('2d');
+/** Aggiorna tutti i grafici */
+function updateCharts(timeLogs, filters) {
+    prepareWorkedTimeChart(timeLogs);
+    prepareEarningsChart(timeLogs, filters);
+    prepareWorktypeDistributionChart(timeLogs);
+    prepareClientWorkedTimeChart(timeLogs);
+}
 
-    // Distruggi il grafico precedente se esiste
-    if (workedTimeChartInstance) {
-        workedTimeChartInstance.destroy();
-    }
+/** Crea il grafico del tempo lavorato giornaliero */
+function prepareWorkedTimeChart(timeLogs) {
+    const canvas = document.getElementById('workedTimeChart');
+    if (!canvas) return;
+    if (workedTimeChartInstance) workedTimeChartInstance.destroy();
 
     const workedTimePerDay = {};
-
     timeLogs.forEach(log => {
-        const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
-        const durationInHours = log.duration / 3600;
-
-        if (workedTimePerDay[date]) {
-            workedTimePerDay[date] += durationInHours;
-        } else {
-            workedTimePerDay[date] = durationInHours;
-        }
+        const dateStr = log.startTime.toDate().toLocaleDateString('it-IT');
+        const hours = log.duration / 3600;
+        workedTimePerDay[dateStr] = (workedTimePerDay[dateStr] || 0) + hours;
     });
 
-    // Ordina le date in ordine cronologico
     const labels = Object.keys(workedTimePerDay)
-        .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
-    const data = labels.map(label => workedTimePerDay[label]);
+        .sort((a,b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
+    const data = labels.map(l => workedTimePerDay[l]);
 
-    // Crea il grafico e salva l'istanza
-    workedTimeChartInstance = new Chart(ctx, {
+    workedTimeChartInstance = new Chart(canvas.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: 'Ore Lavorate',
-                data: data,
+                data,
                 backgroundColor: 'rgba(40, 167, 69, 0.6)',
                 borderColor: 'rgba(40, 167, 69, 1)',
                 borderWidth: 1
@@ -423,62 +362,49 @@ function prepareWorkedTimeChart(timeLogs, filters) {
         },
         options: {
             scales: {
-                x: { title: { display: true, text: 'Data' } },
+                x: { title: { display: true, text: 'Data' }},
                 y: { title: { display: true, text: 'Ore' }, beginAtZero: true }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: hoursTooltipCallback
+                    }
+                }
             }
         }
     });
 }
 
-/**
- * Funzione per preparare il grafico dei guadagni totali
- */
+/** Crea il grafico dei guadagni */
 function prepareEarningsChart(timeLogs, filters) {
-    const canvasElement = document.getElementById('earningsChart');
-    if (!canvasElement) {
-        console.error('Elemento canvas "earningsChart" non trovato nel DOM.');
-        return;
-    }
-    const ctx = canvasElement.getContext('2d');
+    const canvas = document.getElementById('earningsChart');
+    if (!canvas) return;
+    if (earningsChartInstance) earningsChartInstance.destroy();
 
-    // Distruggi il grafico precedente se esiste
-    if (earningsChartInstance) {
-        earningsChartInstance.destroy();
-    }
+    const clientNames = new Set(timeLogs.map(l => l.clientName));
+    const getDateStr = log => log.startTime.toDate().toLocaleDateString('it-IT');
 
-    const clientNames = new Set(timeLogs.map(log => log.clientName));
-
-    // Prepara i dati in base alla modalità di visualizzazione selezionata
     if (filters.clientName || earningsChartViewMode === 'combined' || clientNames.size === 1) {
-        // Visualizzazione combinata o singolo cliente
+        // Combinato
         const earningsPerDay = {};
-
         timeLogs.forEach(log => {
-            const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
-            const durationInHours = log.duration / 3600;
-            const hourlyRate = log.hourlyRate || 0;
-            const amount = durationInHours * hourlyRate;
-
-            if (earningsPerDay[date]) {
-                earningsPerDay[date] += amount;
-            } else {
-                earningsPerDay[date] = amount;
-            }
+            const dateStr = getDateStr(log);
+            const hr = log.hourlyRate || 0;
+            const amount = (log.duration / 3600) * hr;
+            earningsPerDay[dateStr] = (earningsPerDay[dateStr] || 0) + amount;
         });
-
-        // Ordina le date in ordine cronologico
         const labels = Object.keys(earningsPerDay)
-            .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
-        const data = labels.map(label => earningsPerDay[label]);
+            .sort((a,b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
+        const data = labels.map(l => earningsPerDay[l]);
 
-        // Crea il grafico e salva l'istanza
-        earningsChartInstance = new Chart(ctx, {
+        earningsChartInstance = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
-                labels: labels,
+                labels,
                 datasets: [{
                     label: 'Guadagni (€)',
-                    data: data,
+                    data,
                     backgroundColor: 'rgba(23, 162, 184, 0.6)',
                     borderColor: 'rgba(23, 162, 184, 1)',
                     borderWidth: 2,
@@ -487,182 +413,161 @@ function prepareEarningsChart(timeLogs, filters) {
             },
             options: {
                 scales: {
-                    x: { title: { display: true, text: 'Data' } },
+                    x: { title: { display: true, text: 'Data' }},
                     y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: earningsTooltipCallback
+                        }
+                    }
                 }
             }
         });
-    } else if (earningsChartViewMode === 'perClient') {
-        // Visualizzazione per cliente
+    } else {
+        // Per Cliente
         const earningsPerDayPerClient = {};
-
         timeLogs.forEach(log => {
-            const date = new Date(log.startTime.seconds * 1000).toLocaleDateString('it-IT');
-            const durationInHours = log.duration / 3600;
-            const hourlyRate = log.hourlyRate || 0;
-            const amount = durationInHours * hourlyRate;
-
-            if (!earningsPerDayPerClient[log.clientName]) {
-                earningsPerDayPerClient[log.clientName] = {};
-            }
-            if (earningsPerDayPerClient[log.clientName][date]) {
-                earningsPerDayPerClient[log.clientName][date] += amount;
-            } else {
-                earningsPerDayPerClient[log.clientName][date] = amount;
-            }
+            const dateStr = getDateStr(log);
+            const hr = log.hourlyRate || 0;
+            const amount = (log.duration / 3600) * hr;
+            if (!earningsPerDayPerClient[log.clientName]) earningsPerDayPerClient[log.clientName] = {};
+            earningsPerDayPerClient[log.clientName][dateStr] = (earningsPerDayPerClient[log.clientName][dateStr] || 0) + amount;
         });
 
-        // Ottieni tutte le date
-        const allDatesSet = new Set();
-        Object.values(earningsPerDayPerClient).forEach(clientData => {
-            Object.keys(clientData).forEach(date => allDatesSet.add(date));
+        const allDates = new Set();
+        Object.values(earningsPerDayPerClient).forEach(clientObj => {
+            Object.keys(clientObj).forEach(d => allDates.add(d));
         });
-        const labels = Array.from(allDatesSet)
-            .sort((a, b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
+        const labels = Array.from(allDates)
+            .sort((a,b) => new Date(a.split('/').reverse().join('-')) - new Date(b.split('/').reverse().join('-')));
 
-        // Prepara i dataset
         const datasets = [];
-        const colors = ['rgba(23, 162, 184, 1)', 'rgba(220, 53, 69, 1)', 'rgba(255, 193, 7, 1)', 'rgba(40, 167, 69, 1)', 'rgba(102, 16, 242, 1)'];
-
-        let colorIndex = 0;
-        for (const clientName of clientNames) {
-            const clientData = earningsPerDayPerClient[clientName];
-            const data = labels.map(label => clientData[label] || 0);
-            const color = colors[colorIndex % colors.length];
-            colorIndex++;
-
+        const colors = ['rgba(23,162,184,1)', 'rgba(220,53,69,1)', 'rgba(255,193,7,1)', 'rgba(40,167,69,1)', 'rgba(102,16,242,1)'];
+        let cIndex = 0;
+        clientNames.forEach(cn => {
+            const color = colors[cIndex % colors.length];
+            cIndex++;
+            const data = labels.map(l => (earningsPerDayPerClient[cn][l] || 0));
             datasets.push({
-                label: clientName,
-                data: data,
+                label: cn,
+                data,
                 backgroundColor: color.replace('1)', '0.6)'),
                 borderColor: color,
                 borderWidth: 2,
                 fill: false
             });
-        }
+        });
 
-        // Crea il grafico e salva l'istanza
-        earningsChartInstance = new Chart(ctx, {
+        earningsChartInstance = new Chart(canvas.getContext('2d'), {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: datasets
-            },
+            data: { labels, datasets },
             options: {
                 scales: {
-                    x: { title: { display: true, text: 'Data' } },
+                    x: { title: { display: true, text: 'Data' }},
                     y: { title: { display: true, text: 'Euro (€)' }, beginAtZero: true }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: earningsTooltipCallback
+                        }
+                    }
                 }
             }
         });
     }
 }
 
-/**
- * Funzione per preparare il grafico della distribuzione dei tipi di lavoro
- */
-function prepareWorktypeDistributionChart(timeLogs, filters) {
-    const canvasElement = document.getElementById('worktypeDistributionChart');
-    if (!canvasElement) {
-        console.error('Elemento canvas "worktypeDistributionChart" non trovato nel DOM.');
-        return;
-    }
-    const ctx = canvasElement.getContext('2d');
+/** Crea il grafico a torta della distribuzione dei tipi di lavoro */
+const colorPalette = [
+    '#f94144','#f3722c','#f8961e','#f9844a','#f9c74f',
+    '#90be6d','#43aa8b','#4d908e','#577590','#277da1',
+    '#9b5de5','#f15bb5','#fee440','#00bbf9','#00f5d4',
+    '#b5179e','#7209b7','#560bad','#480ca8','#3a0ca3',
+    '#3f37c9','#4361ee','#4895ef','#4cc9f0','#6a4c93'
+];
 
-    // Distruggi il grafico precedente se esiste
-    if (worktypeDistributionChartInstance) {
-        worktypeDistributionChartInstance.destroy();
-    }
+function prepareWorktypeDistributionChart(timeLogs) {
+    const canvas = document.getElementById('worktypeDistributionChart');
+    if (!canvas) return;
+    if (worktypeDistributionChartInstance) worktypeDistributionChartInstance.destroy();
 
     const worktypeDistribution = {};
-
     timeLogs.forEach(log => {
-        const worktypeName = log.worktypeName || 'Sconosciuto';
-        const durationInHours = log.duration / 3600;
-
-        if (worktypeDistribution[worktypeName]) {
-            worktypeDistribution[worktypeName] += durationInHours;
-        } else {
-            worktypeDistribution[worktypeName] = durationInHours;
-        }
+        const wName = log.worktypeName || 'Sconosciuto';
+        const hours = log.duration / 3600;
+        worktypeDistribution[wName] = (worktypeDistribution[wName] || 0) + hours;
     });
 
-    // Prepara i dati per il grafico
     const labels = Object.keys(worktypeDistribution);
-    const data = labels.map(label => worktypeDistribution[label]);
+    const data = labels.map(l => worktypeDistribution[l]);
+    const backgroundColors = labels.map((_, i) => colorPalette[i % colorPalette.length]);
 
-    // Crea il grafico e salva l'istanza
-    worktypeDistributionChartInstance = new Chart(ctx, {
+    worktypeDistributionChartInstance = new Chart(canvas.getContext('2d'), {
         type: 'pie',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: 'Ore Lavorate',
                 data: data,
-                backgroundColor: [
-                    'rgba(255, 193, 7, 0.6)',
-                    'rgba(220, 53, 69, 0.6)',
-                    'rgba(40, 167, 69, 0.6)',
-                    'rgba(23, 162, 184, 0.6)',
-                    'rgba(102, 16, 242, 0.6)',
-                ],
-                borderColor: [
-                    'rgba(255, 193, 7, 1)',
-                    'rgba(220, 53, 69, 1)',
-                    'rgba(40, 167, 69, 1)',
-                    'rgba(23, 162, 184, 1)',
-                    'rgba(102, 16, 242, 1)',
-                ],
+                backgroundColor: backgroundColors,
+                borderColor: backgroundColors,
                 borderWidth: 1
             }]
         },
         options: {
-            responsive: true
+            responsive: true,
+            // maintainAspectRatio: true, // lascialo commentato se vuoi più elasticità
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: hoursTooltipPieCallback
+                    }
+                },
+                legend: {
+                    position: 'bottom', // leggenda sotto il grafico
+                    labels: {
+                        boxWidth: 20,
+                        boxHeight: 20,
+                        padding: 10
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    top: 20,
+                    bottom: 20
+                }
+            }
         }
     });
 }
 
-/**
- * Funzione per preparare il grafico del tempo lavorato per cliente
- */
-function prepareClientWorkedTimeChart(timeLogs, filters) {
-    const canvasElement = document.getElementById('clientWorkedTimeChart');
-    if (!canvasElement) {
-        console.error('Elemento canvas "clientWorkedTimeChart" non trovato nel DOM.');
-        return;
-    }
-    const ctx = canvasElement.getContext('2d');
-
-    // Distruggi il grafico precedente se esiste
-    if (clientWorkedTimeChartInstance) {
-        clientWorkedTimeChartInstance.destroy();
-    }
+/** Crea il grafico a barre del tempo lavorato per cliente */
+function prepareClientWorkedTimeChart(timeLogs) {
+    const canvas = document.getElementById('clientWorkedTimeChart');
+    if (!canvas) return;
+    if (clientWorkedTimeChartInstance) clientWorkedTimeChartInstance.destroy();
 
     const workedTimePerClient = {};
-
     timeLogs.forEach(log => {
-        const clientName = log.clientName || 'Sconosciuto';
-        const durationInHours = log.duration / 3600;
-
-        if (workedTimePerClient[clientName]) {
-            workedTimePerClient[clientName] += durationInHours;
-        } else {
-            workedTimePerClient[clientName] = durationInHours;
-        }
+        const cname = log.clientName || 'Sconosciuto';
+        const hours = log.duration / 3600;
+        workedTimePerClient[cname] = (workedTimePerClient[cname] || 0) + hours;
     });
 
-    // Prepara i dati per il grafico
     const labels = Object.keys(workedTimePerClient);
-    const data = labels.map(label => workedTimePerClient[label]);
+    const data = labels.map(l => workedTimePerClient[l]);
 
-    // Crea il grafico e salva l'istanza
-    clientWorkedTimeChartInstance = new Chart(ctx, {
+    clientWorkedTimeChartInstance = new Chart(canvas.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: 'Ore Lavorate per Cliente',
-                data: data,
+                data,
                 backgroundColor: 'rgba(0, 123, 255, 0.6)',
                 borderColor: 'rgba(0, 123, 255, 1)',
                 borderWidth: 1
@@ -670,8 +575,15 @@ function prepareClientWorkedTimeChart(timeLogs, filters) {
         },
         options: {
             scales: {
-                x: { title: { display: true, text: 'Cliente' } },
+                x: { title: { display: true, text: 'Cliente' }},
                 y: { title: { display: true, text: 'Ore' }, beginAtZero: true }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: hoursTooltipCallback
+                    }
+                }
             }
         }
     });
