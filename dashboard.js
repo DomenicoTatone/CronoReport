@@ -1,4 +1,4 @@
-let earningsChartViewMode = 'combined'; // Valori possibili: 'combined', 'perClient'
+let earningsChartViewMode = 'combined';
 const MAX_TOTAL_TIMELOGS = 500;
 
 const dashboardTemplate = `
@@ -482,7 +482,7 @@ function prepareEarningsChart(timeLogs, filters) {
 
 /** Crea il grafico a torta della distribuzione dei tipi di lavoro */
 const colorPalette = [
-    '#f94144','#f3722c','#f8961e','#f9844a','#f9c74f',
+    '#f94144','#f3722c','#f8961e','#f9c74f',
     '#90be6d','#43aa8b','#4d908e','#577590','#277da1',
     '#9b5de5','#f15bb5','#fee440','#00bbf9','#00f5d4',
     '#b5179e','#7209b7','#560bad','#480ca8','#3a0ca3',

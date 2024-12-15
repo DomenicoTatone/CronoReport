@@ -33,7 +33,6 @@ const timerTemplate = `
                         <label for="client-select" class="font-weight-bold">Cliente:</label>
                         <select id="client-select" class="form-control">
                             <option value="">--Seleziona Cliente--</option>
-                            <!-- Opzioni popolate dinamicamente -->
                         </select>
                     </div>
                     <!-- Seleziona Sito -->
@@ -41,7 +40,6 @@ const timerTemplate = `
                         <label for="site-select" class="font-weight-bold">Sito:</label>
                         <select id="site-select" class="form-control">
                             <option value="">--Seleziona Sito--</option>
-                            <!-- Opzioni popolate dinamicamente -->
                         </select>
                     </div>
                     <!-- Seleziona Tipo di Lavoro -->
@@ -49,7 +47,6 @@ const timerTemplate = `
                         <label for="worktype-select" class="font-weight-bold">Tipo di Lavoro:</label>
                         <select id="worktype-select" class="form-control">
                             <option value="">--Seleziona Tipo di Lavoro--</option>
-                            <!-- Opzioni popolate dinamicamente -->
                         </select>
                     </div>
                     <!-- Inserisci Link -->
@@ -95,24 +92,75 @@ const timerTemplate = `
         </div>
     </div>
 </div>
+
+<!-- Modale per modificare il timer -->
+<div class="modal fade" id="edit-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="editTimerModalLabel">Modifica Timer</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Chiudi">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-timer-form">
+          <input type="hidden" id="edit-timer-id">
+          <div class="form-group">
+            <label for="edit-client-select" class="font-weight-bold">Cliente:</label>
+            <select id="edit-client-select" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label for="edit-site-select" class="font-weight-bold">Sito:</label>
+            <select id="edit-site-select" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label for="edit-worktype-select" class="font-weight-bold">Tipo di Lavoro:</label>
+            <select id="edit-worktype-select" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label for="edit-link-input" class="font-weight-bold">Link (opzionale):</label>
+            <input type="url" id="edit-link-input" class="form-control" placeholder="https://esempio.com">
+          </div>
+          <div class="form-group">
+            <label for="edit-accumulated-time" class="font-weight-bold">Tempo accumulato (hh:mm:ss):</label>
+            <input type="text" id="edit-accumulated-time" class="form-control" placeholder="Es: 01:23:45">
+            <small class="form-text text-muted">Inserisci il tempo nel formato hh:mm:ss</small>
+          </div>
+          <div class="form-group">
+            <label for="edit-start-time" class="font-weight-bold">Data/Ora Inizio:</label>
+            <input type="text" id="edit-start-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss">
+          </div>
+          <div class="form-group">
+            <label for="edit-end-time" class="font-weight-bold">Data/Ora Fine (opzionale):</label>
+            <input type="text" id="edit-end-time" class="form-control" placeholder="DD/MM/YYYY HH:mm:ss">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="delete-timer-btn">Elimina Timer</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-primary" id="save-timer-changes-btn">Salva Modifiche</button>
+      </div>
+    </div>
+  </div>
+</div>
 `;
 
 // Funzione per inizializzare gli eventi della sezione Timer
 async function initializeTimerEvents() {
     if (!currentUser) {
         console.error("Utente non autenticato: currentUser è null in initializeTimerEvents.");
-        return; // Esci se currentUser non è definito
+        return; 
     }
     console.log("Utente autenticato in initializeTimerEvents:", currentUser.uid);
     
-    // Inserimento del template nel DOM
     const timerDiv = document.createElement('div');
     timerDiv.id = 'timer-template';
     timerDiv.style.display = 'none';
     timerDiv.innerHTML = timerTemplate;
     document.body.appendChild(timerDiv);
 
-    // Elementi DOM - assegnazione delle variabili
     clientSelect = document.getElementById('client-select');
     siteSelect = document.getElementById('site-select');
     worktypeSelect = document.getElementById('worktype-select');
@@ -122,18 +170,12 @@ async function initializeTimerEvents() {
     startTimerBtn = document.getElementById('start-timer-btn');
     timerCardsContainer = document.getElementById('timer-cards');
 
-    // Inizializza Flatpickr con supporto per i secondi e locale italiana
     const manualStartTimePicker = flatpickr(manualStartTimeInput, {
         enableTime: true,
         enableSeconds: true,
         time_24hr: true,
         dateFormat: "d/m/Y H:i:S",
-        locale: "it",
-        onChange: function (selectedDates, dateStr, instance) {
-            if (selectedDates.length > 0) {
-                manualEndTimePicker.set('minDate', selectedDates[0]);
-            }
-        }
+        locale: "it"
     });
 
     const manualEndTimePicker = flatpickr(manualEndTimeInput, {
@@ -141,18 +183,11 @@ async function initializeTimerEvents() {
         enableSeconds: true,
         time_24hr: true,
         dateFormat: "d/m/Y H:i:S",
-        locale: "it",
-        onChange: function (selectedDates, dateStr, instance) {
-            if (selectedDates.length > 0) {
-                manualStartTimePicker.set('maxDate', selectedDates[0]);
-            }
-        }
+        locale: "it"
     });
 
-    // Carica i Clienti
     loadTimerClientDropdown(clientSelect);
 
-    // Aggiungi listener per quando il Cliente cambia, per aggiornare Siti e Tipi di Lavoro
     clientSelect.addEventListener('change', () => {
         const selectedClientId = clientSelect.value;
         if (selectedClientId) {
@@ -164,23 +199,16 @@ async function initializeTimerEvents() {
         }
     });
 
-    // Inizialmente, Siti e Tipi di Lavoro sono vuoti fino a quando non viene selezionato un Cliente
-    siteSelect.innerHTML = '<option value="">--Seleziona Sito--</option>';
-    worktypeSelect.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
-
-    // Aggiungi l'event listener per il pulsante "Avvia Timer"
     startTimerBtn.addEventListener('click', () => {
         const clientId = clientSelect.value;
         const siteId = siteSelect.value;
         const worktypeId = worktypeSelect.value;
-        const link = linkInput.value.trim(); // Recupera il link
+        const link = linkInput.value.trim();
 
-        // Recupera le date inserite
         const manualStartTimeValue = manualStartTimeInput.value;
         const manualEndTimeValue = manualEndTimeInput.value;
 
         if (clientId && siteId && worktypeId) {
-            // Verifica se l'utente ha inserito l'ora di fine senza l'ora di inizio
             if (manualEndTimeValue && !manualStartTimeValue) {
                 Swal.fire({
                     icon: 'warning',
@@ -191,10 +219,7 @@ async function initializeTimerEvents() {
                 return;
             }
 
-            // Crea un nuovo timer
             createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue);
-
-            // Pulisci i campi dopo aver avviato il timer
             linkInput.value = '';
             manualStartTimeInput.value = '';
             manualEndTimeInput.value = '';
@@ -208,7 +233,7 @@ async function initializeTimerEvents() {
         }
     });
 
-    // Carica i timer attivi da Firestore
+    // Carica i timer attivi
     db.collection('timers')
         .where('uid', '==', currentUser.uid)
         .where('isActive', '==', true)
@@ -227,26 +252,20 @@ async function initializeTimerEvents() {
                     link: timerData.link || '',
                     accumulatedElapsedTime: timerData.accumulatedElapsedTime || 0,
                     lastStartTime: timerData.lastStartTime ? timerData.lastStartTime.toDate() : new Date(),
+                    endTime: timerData.endTime ? timerData.endTime.toDate() : null,
                     isPaused: timerData.isPaused || false,
                     intervalId: null,
                     timerDisplay: null,
-                    hourlyRate: timerData.hourlyRate || 0 // Assicurati che hourlyRate sia definito
+                    hourlyRate: timerData.hourlyRate || 0
                 };
 
-                // Aggiungi il timer all'array dei timer attivi
                 activeTimers.push(timer);
-
-                // Crea la scheda per il timer
                 const timerCard = createTimerCard(timer);
-
-                // Aggiungi la scheda al container
                 timerCardsContainer.appendChild(timerCard);
 
-                // Se il timer non è in pausa, inizia l'aggiornamento
                 if (!timer.isPaused) {
                     startTimer(timer);
                 } else {
-                    // Se il timer è in pausa, mostra il tempo accumulato
                     const totalElapsedTime = timer.accumulatedElapsedTime;
                     timer.timerDisplay.textContent = formatDuration(totalElapsedTime);
                 }
@@ -255,6 +274,9 @@ async function initializeTimerEvents() {
         .catch(error => {
             console.error('Errore nel caricamento dei timer attivi:', error);
         });
+
+    // Inizializza gli eventi della modale
+    initializeEditModalEvents();
 }
 
 // Funzione per caricare i Clienti nel Dropdown del Timer
@@ -318,7 +340,6 @@ function loadWorktypes(selectElement, clientId) {
 
 // Funzione per analizzare la data e l'ora in formato locale con secondi
 function parseLocalDateTime(s) {
-    // Si aspetta una stringa nel formato 'DD/MM/YYYY HH:mm:ss'
     const [datePart, timePart] = s.split(' ');
     if (!datePart || !timePart) return null;
     const [day, month, year] = datePart.split('/').map(Number);
@@ -343,10 +364,8 @@ async function getHourlyRate() {
 
         if (!snapshot.empty) {
             const config = snapshot.docs[0].data();
-            console.log('Report Config:', config);
             return typeof config.hourlyRate === 'number' ? config.hourlyRate : 0;
         }
-        console.warn('Nessuna configurazione di report trovata, impostato hourlyRate a 0.');
         return 0;
     } catch (error) {
         console.error('Errore nel recuperare hourlyRate:', error);
@@ -356,12 +375,10 @@ async function getHourlyRate() {
 
 // Funzione per creare un nuovo timer
 async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTimeValue, manualEndTimeValue) {
-    // Recupera i nomi dei campi selezionati
     const clientName = clientSelect.options[clientSelect.selectedIndex].text;
     const siteName = siteSelect.options[siteSelect.selectedIndex].text;
     const worktypeName = worktypeSelect.options[worktypeSelect.selectedIndex].text;
 
-    // Recupera `hourlyRate` dal `worktype`
     let hourlyRate = 0;
     try {
         const worktypeDoc = await db.collection('worktypes').doc(worktypeId).get();
@@ -372,17 +389,9 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         console.error('Errore nel recuperare la tariffa oraria del tipo di lavoro:', error);
     }
     
-    // Parse delle date inserite utilizzando la nuova funzione
     const manualStartTime = manualStartTimeValue ? parseLocalDateTime(manualStartTimeValue) : null;
     const manualEndTime = manualEndTimeValue ? parseLocalDateTime(manualEndTimeValue) : null;
 
-    // Aggiungi console.log per debug
-    console.log('manualStartTimeValue:', manualStartTimeValue);
-    console.log('manualStartTime:', manualStartTime);
-    console.log('manualEndTimeValue:', manualEndTimeValue);
-    console.log('manualEndTime:', manualEndTime);
-
-    // Controlla se le date sono valide
     if (manualStartTimeValue && !manualStartTime) {
         Swal.fire({
             icon: 'error',
@@ -403,10 +412,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
     }
 
     if (manualStartTime && manualEndTime) {
-        // **Caso 1:** L'utente ha specificato sia l'ora di inizio che di fine
         const durationInSeconds = (manualEndTime - manualStartTime) / 1000;
-        console.log('Durata calcolata in secondi:', durationInSeconds);
-
         if (durationInSeconds <= 0) {
             Swal.fire({
                 icon: 'error',
@@ -417,17 +423,8 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             return;
         }
 
-        // Recupera l'hourlyRate
         let hourlyRate = await getHourlyRate();
-        console.log('Hourly Rate:', hourlyRate);
 
-        // Verifica che hourlyRate sia un numero
-        if (typeof hourlyRate !== 'number') {
-            hourlyRate = 0;
-            console.warn('Hourly Rate non valido, impostato a 0.');
-        }
-
-        // Salva direttamente il log nel database, includendo hourlyRate
         db.collection('timeLogs').add({
             uid: currentUser.uid,
             clientId: clientId,
@@ -442,7 +439,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             duration: durationInSeconds,
             isReported: false,
             isDeleted: false,
-            hourlyRate: hourlyRate // Assicurati che hourlyRate sia definito
+            hourlyRate: hourlyRate
         }).then(() => {
             Swal.fire({
                 icon: 'success',
@@ -461,7 +458,6 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         });
 
     } else if (manualStartTime && !manualEndTime) {
-        // **Caso 2:** L'utente ha specificato solo l'ora di inizio
         const now = new Date();
         if (manualStartTime > now) {
             Swal.fire({
@@ -473,21 +469,9 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             return;
         }
 
-        // **Non calcolare accumulatedElapsedTime qui**
-        // Invece, imposta accumulatedElapsedTime a zero
         const accumulatedElapsedTime = 0;
-
-        // Recupera l'hourlyRate
         let hourlyRate = await getHourlyRate();
-        console.log('Hourly Rate:', hourlyRate);
 
-        // Verifica che hourlyRate sia un numero
-        if (typeof hourlyRate !== 'number') {
-            hourlyRate = 0;
-            console.warn('Hourly Rate non valido, impostato a 0.');
-        }
-
-        // Crea un oggetto timer
         const timer = {
             clientId: clientId,
             siteId: siteId,
@@ -497,14 +481,13 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             worktypeName: worktypeName,
             link: link,
             accumulatedElapsedTime: accumulatedElapsedTime,
-            lastStartTime: manualStartTime, // Imposta lastStartTime a manualStartTime
+            lastStartTime: manualStartTime,
             isPaused: false,
             intervalId: null,
             timerDisplay: null,
-            hourlyRate: hourlyRate // Assicurati di aggiungere hourlyRate
+            hourlyRate: hourlyRate
         };
 
-        // Salva il timer su Firestore
         db.collection('timers').add({
             uid: currentUser.uid,
             clientId: clientId,
@@ -518,7 +501,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             lastStartTime: firebase.firestore.Timestamp.fromDate(manualStartTime),
             isPaused: timer.isPaused,
             isActive: true,
-            hourlyRate: hourlyRate // Assicurati di aggiungere hourlyRate
+            hourlyRate: hourlyRate
         }).then(docRef => {
             timer.id = docRef.id;
             activeTimers.push(timer);
@@ -536,8 +519,6 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
         });
 
     } else {
-        // **Caso 3:** Nessun orario manuale specificato, avvia un timer normale
-        // Crea un oggetto timer
         const timer = {
             clientId: clientId,
             siteId: siteId,
@@ -551,21 +532,15 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             isPaused: false,
             intervalId: null,
             timerDisplay: null,
-            hourlyRate: await getHourlyRate() // Assicurati di aggiungere hourlyRate
+            hourlyRate: await getHourlyRate()
         };
 
-        // Recupera l'hourlyRate
         let hourlyRate = timer.hourlyRate;
-        console.log('Hourly Rate:', hourlyRate);
-
-        // Verifica che hourlyRate sia un numero
         if (typeof hourlyRate !== 'number') {
             hourlyRate = 0;
             timer.hourlyRate = 0;
-            console.warn('Hourly Rate non valido, impostato a 0.');
         }
 
-        // Salva il timer su Firestore
         db.collection('timers').add({
             uid: currentUser.uid,
             clientId: clientId,
@@ -579,7 +554,7 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
             lastStartTime: firebase.firestore.FieldValue.serverTimestamp(),
             isPaused: timer.isPaused,
             isActive: true,
-            hourlyRate: hourlyRate // Assicurati di aggiungere hourlyRate
+            hourlyRate: hourlyRate
         }).then(docRef => {
             timer.id = docRef.id;
             activeTimers.push(timer);
@@ -598,6 +573,344 @@ async function createNewTimer(clientId, siteId, worktypeId, link, manualStartTim
     }
 }
 
+function initializeEditModalEvents() {
+    const saveChangesBtn = document.getElementById('save-timer-changes-btn');
+    const deleteTimerBtn = document.getElementById('delete-timer-btn');
+
+    if (saveChangesBtn) {
+        saveChangesBtn.addEventListener('click', () => {
+            saveTimerChanges();
+        });
+    }
+
+    if (deleteTimerBtn) {
+        deleteTimerBtn.addEventListener('click', () => {
+            deleteTimerFromModal();
+        });
+    }
+
+    flatpickr('#edit-start-time', {
+        enableTime: true,
+        enableSeconds: true,
+        time_24hr: true,
+        dateFormat: "d/m/Y H:i:S",
+        locale: "it"
+    });
+
+    flatpickr('#edit-end-time', {
+        enableTime: true,
+        enableSeconds: true,
+        time_24hr: true,
+        dateFormat: "d/m/Y H:i:S",
+        locale: "it"
+    });
+}
+
+// Funzione per aprire la modale di modifica timer
+function openEditTimerModal(timer) {
+    document.getElementById('edit-timer-id').value = timer.id;
+
+    loadAllClientsForEditSelect(document.getElementById('edit-client-select'), timer.clientId)
+        .then(() => loadAllSitesForEditSelect(document.getElementById('edit-site-select'), timer.clientId, timer.siteId))
+        .then(() => loadAllWorktypesForEditSelect(document.getElementById('edit-worktype-select'), timer.clientId, timer.worktypeId))
+        .catch(error => console.error('Errore nel caricamento dati per la modale di modifica:', error));
+
+    document.getElementById('edit-link-input').value = timer.link || '';
+    document.getElementById('edit-accumulated-time').value = secondsToHHMMSS(timer.accumulatedElapsedTime || 0);
+
+    const startStr = timer.lastStartTime ? formatLocalDateTime(timer.lastStartTime) : '';
+    document.getElementById('edit-start-time').value = startStr;
+
+    if (timer.endTime) {
+        document.getElementById('edit-end-time').value = formatLocalDateTime(timer.endTime);
+    } else {
+        document.getElementById('edit-end-time').value = '';
+    }
+
+    $('#edit-timer-modal').modal('show');
+}
+
+// Funzione per convertire secondi in hh:mm:ss
+function secondsToHHMMSS(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+}
+
+// Funzione per convertire hh:mm:ss in secondi
+function hhmmssToSeconds(hhmmss) {
+    const parts = hhmmss.split(':');
+    if (parts.length !== 3) return NaN;
+    const hours = parseInt(parts[0]);
+    const minutes = parseInt(parts[1]);
+    const seconds = parseInt(parts[2]);
+    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) return NaN;
+    return hours * 3600 + minutes * 60 + seconds;
+}
+
+// Funzione per formattare una durata in secondi nel formato hh:mm:ss
+function formatDuration(seconds) {
+    return secondsToHHMMSS(seconds);
+}
+
+function formatLocalDateTime(date) {
+    const dd = String(date.getDate()).padStart(2,'0');
+    const mm = String(date.getMonth()+1).padStart(2,'0');
+    const yyyy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2,'0');
+    const min = String(date.getMinutes()).padStart(2,'0');
+    const ss = String(date.getSeconds()).padStart(2,'0');
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}`;
+}
+
+// Carica tutti i clienti per la modale di modifica
+function loadAllClientsForEditSelect(selectElement, selectedClientId) {
+    return db.collection('clients')
+        .where('uid', '==', currentUser.uid)
+        .orderBy('name')
+        .get()
+        .then(snapshot => {
+            selectElement.innerHTML = '';
+            snapshot.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.data().name;
+                selectElement.appendChild(opt);
+            });
+            if (selectedClientId) {
+                selectElement.value = selectedClientId;
+            }
+        });
+}
+
+// Carica tutti i siti per il cliente selezionato
+function loadAllSitesForEditSelect(selectElement, clientId, selectedSiteId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Sito--</option>';
+    return db.collection('sites')
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', clientId)
+        .orderBy('name')
+        .get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.data().name;
+                selectElement.appendChild(opt);
+            });
+            if (selectedSiteId) {
+                selectElement.value = selectedSiteId;
+            }
+        });
+}
+
+// Carica tutti i tipi di lavoro per il cliente selezionato
+function loadAllWorktypesForEditSelect(selectElement, clientId, selectedWorktypeId) {
+    selectElement.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
+    return db.collection('worktypes')
+        .where('uid', '==', currentUser.uid)
+        .where('clientId', '==', clientId)
+        .orderBy('name')
+        .get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = doc.data().name;
+                selectElement.appendChild(opt);
+            });
+            if (selectedWorktypeId) {
+                selectElement.value = selectedWorktypeId;
+            }
+        });
+}
+
+// Salvataggio modifiche timer
+document.addEventListener('DOMContentLoaded', () => {
+    const saveChangesBtn = document.getElementById('save-timer-changes-btn');
+    if (saveChangesBtn) {
+        saveChangesBtn.addEventListener('click', () => {
+            saveTimerChanges();
+        });
+    }
+});
+
+function deleteTimerFromModal() {
+    const timerId = document.getElementById('edit-timer-id').value;
+    if (!timerId) return;
+
+    Swal.fire({
+        title: 'Sei sicuro?',
+        text: 'Vuoi eliminare questo timer?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sì, elimina',
+        cancelButtonText: 'Annulla'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            db.collection('timers').doc(timerId).delete()
+                .then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Eliminato!',
+                        text: 'Il timer è stato eliminato con successo.',
+                        confirmButtonText: 'OK'
+                    });
+                    $('#edit-timer-modal').modal('hide');
+
+                    const index = activeTimers.findIndex(t => t.id === timerId);
+                    if (index > -1) {
+                        activeTimers.splice(index, 1);
+                    }
+                    const oldCard = document.querySelector(`.timer-card[data-timer-id="${timerId}"]`);
+                    if (oldCard) {
+                        oldCard.parentElement.remove();
+                    }
+                })
+                .catch(error => {
+                    console.error('Errore durante l\'eliminazione del timer:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Errore',
+                        text: 'Si è verificato un errore durante l\'eliminazione del timer.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+    });
+}
+
+function saveTimerChanges() {
+    const timerId = document.getElementById('edit-timer-id').value;
+    const clientId = document.getElementById('edit-client-select').value;
+    const siteId = document.getElementById('edit-site-select').value;
+    const worktypeId = document.getElementById('edit-worktype-select').value;
+    const link = document.getElementById('edit-link-input').value.trim();
+    const accumulatedTimeStr = document.getElementById('edit-accumulated-time').value.trim();
+    const startTimeStr = document.getElementById('edit-start-time').value.trim();
+    const endTimeStr = document.getElementById('edit-end-time').value.trim();
+
+    const accumulatedSeconds = hhmmssToSeconds(accumulatedTimeStr);
+    if (isNaN(accumulatedSeconds)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'Il tempo accumulato inserito non è valido. Usa il formato hh:mm:ss.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+
+    const newStartTime = startTimeStr ? parseLocalDateTime(startTimeStr) : null;
+    if (startTimeStr && !newStartTime) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'La data/ora di inizio non è valida.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+
+    let newEndTime = null;
+    if (endTimeStr) {
+        newEndTime = parseLocalDateTime(endTimeStr);
+        if (!newEndTime) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'La data/ora di fine non è valida.',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+    }
+
+    Promise.all([
+        db.collection('clients').doc(clientId).get(),
+        db.collection('sites').doc(siteId).get(),
+        db.collection('worktypes').doc(worktypeId).get()
+    ]).then(results => {
+        const clientDoc = results[0];
+        const siteDoc = results[1];
+        const worktypeDoc = results[2];
+
+        const clientName = clientDoc.exists ? clientDoc.data().name : 'Sconosciuto';
+        const siteName = siteDoc.exists ? siteDoc.data().name : 'Sconosciuto';
+        let worktypeName = 'Sconosciuto';
+        let hourlyRate = 0;
+        if (worktypeDoc.exists) {
+            worktypeName = worktypeDoc.data().name || 'Sconosciuto';
+            hourlyRate = worktypeDoc.data().hourlyRate || 0;
+        }
+
+        const updateData = {
+            clientId: clientId,
+            siteId: siteId,
+            worktypeId: worktypeId,
+            clientName: clientName,
+            siteName: siteName,
+            worktypeName: worktypeName,
+            link: link,
+            accumulatedElapsedTime: accumulatedSeconds,
+            hourlyRate: hourlyRate
+        };
+
+        if (newStartTime) {
+            updateData.lastStartTime = firebase.firestore.Timestamp.fromDate(newStartTime);
+        }
+
+        if (newEndTime) {
+            updateData.endTime = firebase.firestore.Timestamp.fromDate(newEndTime);
+        } else {
+            updateData.endTime = firebase.firestore.FieldValue.delete();
+        }
+
+        return db.collection('timers').doc(timerId).update(updateData)
+            .then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Modifiche Salvate',
+                    text: 'Il timer è stato aggiornato con successo.',
+                    confirmButtonText: 'OK'
+                });
+                $('#edit-timer-modal').modal('hide');
+
+                const timer = activeTimers.find(t => t.id === timerId);
+                if (timer) {
+                    timer.clientId = clientId;
+                    timer.siteId = siteId;
+                    timer.worktypeId = worktypeId;
+                    timer.clientName = document.getElementById('edit-client-select').selectedOptions[0].text;
+                    timer.siteName = document.getElementById('edit-site-select').selectedOptions[0].text;
+                    timer.worktypeName = document.getElementById('edit-worktype-select').selectedOptions[0].text;
+                    timer.link = link;
+                    timer.accumulatedElapsedTime = parseFloat(accumulatedSeconds);
+                    timer.hourlyRate = parseFloat(updateData.hourlyRate); // Qui usiamo updateData.hourlyRate
+
+                    const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
+                    if (oldCard) {
+                        oldCard.parentElement.remove();
+                    }
+
+                    const newCard = createTimerCard(timer);
+                    document.getElementById('timer-cards').appendChild(newCard);
+                }
+            });
+    }).catch(error => {
+        console.error('Errore nel salvataggio delle modifiche del timer:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'Si è verificato un errore durante il salvataggio delle modifiche.',
+            confirmButtonText: 'OK'
+        });
+    });
+}
+
 // Funzione per creare la scheda del timer
 function createTimerCard(timer) {
     // Crea l'elemento colonna
@@ -607,6 +920,7 @@ function createTimerCard(timer) {
     // Crea la card
     const card = document.createElement('div');
     card.classList.add('card', 'h-100', 'shadow-sm', 'timer-card');
+    card.setAttribute('data-timer-id', timer.id);
 
     // Crea il corpo della card
     const cardBody = document.createElement('div');
@@ -666,6 +980,10 @@ function createTimerCard(timer) {
     stopBtn.classList.add('btn', 'btn-danger');
     stopBtn.textContent = 'Stop';
 
+    const editBtn = document.createElement('button');
+    editBtn.classList.add('btn', 'btn-info');
+    editBtn.textContent = 'Modifica';
+
     // Event listeners per i pulsanti
     pauseBtn.addEventListener('click', () => {
         pauseTimer(timer);
@@ -683,9 +1001,14 @@ function createTimerCard(timer) {
         stopTimer(timer, col);
     });
 
+    editBtn.addEventListener('click', () => {
+        openEditTimerModal(timer);
+    });
+
     buttonGroup.appendChild(pauseBtn);
     buttonGroup.appendChild(resumeBtn);
     buttonGroup.appendChild(stopBtn);
+    buttonGroup.appendChild(editBtn);
 
     // Assembla la card
     cardBody.appendChild(cardHeader);
