@@ -48,9 +48,9 @@ const savedTimersTemplate = `
                     <label for="unmark-action-select" class="font-weight-bold">Seleziona Azione:</label>
                     <select id="unmark-action-select" class="form-control">
                         <option value="">-- Seleziona Azione --</option>
-                        <option value="unmark-all">Rimuovi Contrassegno a Tutti i Timer</option>
-                        <option value="unmark-selected">Rimuovi Contrassegno ai Timer Selezionati</option>
-                        <option value="unmark-filtered">Rimuovi Contrassegno ai Timer Filtrati</option>
+                        <option value="unmark-all">Segna Tutti i Timer come Non Reportati</option>
+                        <option value="unmark-selected">Segna i Timer Selezionati come Non Reportati</option>
+                        <option value="unmark-filtered">Segna i Timer Filtrati come Non Reportat</option>
                     </select>
                 </div>
                 <div class="col-md-6 d-flex align-items-end">

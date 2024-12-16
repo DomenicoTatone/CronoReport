@@ -68,6 +68,7 @@ body {
 .timer-checkbox {
     width: 1.2em;
     height: 1.2em;
+    margin-left: -10px;
 }
 
 /* Rimuove il bordo di default se necessario */
