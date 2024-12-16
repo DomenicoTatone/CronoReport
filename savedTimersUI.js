@@ -169,7 +169,7 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
 
     // Colonna per la checkbox (solo se non siamo nel cestino)
     const checkboxCell = document.createElement('td');
-    checkboxCell.classList.add('text-center', 'align-middle');
+    checkboxCell.classList.add('text-center');
 
     if (!isRecycleBin) {
         const checkbox = document.createElement('input');
@@ -184,10 +184,10 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
 
     row.appendChild(checkboxCell);
 
-    // Colonna per Cliente e Sito con icona
-    const clientCell = document.createElement('td');
-    clientCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.clientName} - ${logData.siteName || 'Sito Sconosciuto'}`;
-    row.appendChild(clientCell);
+    // Colonna per Sito con icona (rimosso il clientName)
+    const siteCell = document.createElement('td');
+    siteCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.siteName || 'Sito Sconosciuto'}`;
+    row.appendChild(siteCell);
 
     // Colonna per Tipo di Lavoro con icona
     const worktypeCell = document.createElement('td');
@@ -202,7 +202,8 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     // Colonna per Orario di Inizio e Fine con formattazione
     const timeCell = document.createElement('td');
     timeCell.innerHTML = `
-        <i class="fas fa-play mr-1 text-success"></i> ${formatTimeWithSeconds(logData.startTime)}<br>
+        <i class="fas fa-play mr-1 text-success"></i> ${formatTimeWithSeconds(logData.startTime)} 
+        | 
         <i class="fas fa-stop mr-1 text-danger"></i> ${formatTimeWithSeconds(logData.endTime)}
     `;
     row.appendChild(timeCell);
@@ -213,7 +214,7 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
         const linkAnchor = document.createElement('a');
         linkAnchor.href = logData.link;
         linkAnchor.target = '_blank';
-        linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>Apri Link';
+        linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>';
         linkCell.appendChild(linkAnchor);
     } else {
         linkCell.textContent = 'N/A';

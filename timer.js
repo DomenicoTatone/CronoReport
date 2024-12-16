@@ -153,7 +153,6 @@ async function initializeTimerEvents() {
         console.error("Utente non autenticato: currentUser è null in initializeTimerEvents.");
         return; 
     }
-    console.log("Utente autenticato in initializeTimerEvents:", currentUser.uid);
     
     const timerDiv = document.createElement('div');
     timerDiv.id = 'timer-template';

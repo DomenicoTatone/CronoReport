@@ -653,14 +653,13 @@ function displayTimers(timers) {
                     // Creazione della tabella per i timer di questo giorno
                     const table = document.createElement('table');
                     table.classList.add('table', 'table-striped', 'table-bordered');
-
+                    
                     // Creazione dell'header della tabella
                     const thead = document.createElement('thead');
                     const headerRow = document.createElement('tr');
-
                     const headers = [
-                        'Seleziona',
-                        'Cliente - Sito',
+                        '',
+                        'Sito',
                         'Tipo di Lavoro',
                         'Durata',
                         'Orari',
@@ -669,38 +668,57 @@ function displayTimers(timers) {
                         'Azione'
                     ];
 
-                    headers.forEach(headerText => {
+                    headers.forEach((headerText, index) => {
                         const th = document.createElement('th');
-                        th.textContent = headerText;
                         th.scope = 'col';
+                        if (index === 0) {
+                            th.innerHTML = '<i class="fas fa-check-double select-all-day-icon" style="cursor:pointer;"></i>';
+                        } else {
+                            th.textContent = headerText;
+                        }
                         headerRow.appendChild(th);
                     });
-
+                    
                     thead.appendChild(headerRow);
                     table.appendChild(thead);
 
                     // Corpo della tabella
                     const tbody = document.createElement('tbody');
-
+                    
                     const dayTimers = days[day];
-
+                    
                     // Ordina i timer per orario di inizio decrescente
                     dayTimers.sort((a, b) => b.data.startTime.seconds - a.data.startTime.seconds);
-
+                    
                     dayTimers.forEach(timerObj => {
                         const logData = timerObj.data;
                         const timerRow = createTimerRow(timerObj.id, logData);
                         tbody.appendChild(timerRow);
                     });
-
+                    
                     table.appendChild(tbody);
-
+                    
                     // Aggiungi la tabella al body del giorno
                     dayBody.appendChild(table);
                     dayCollapse.appendChild(dayBody);
-
+                    
                     daySection.appendChild(dayHeader);
                     daySection.appendChild(dayCollapse);
+                    
+                    // Event listener sull'icona per selezionare tutti i checkbox di quel giorno
+                    const selectAllIcon = table.querySelector('.select-all-day-icon');
+                    if (selectAllIcon) {
+                        selectAllIcon.addEventListener('click', () => {
+                            const checkboxes = table.querySelectorAll('.timer-checkbox');
+                            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    
+                            if (allChecked) {
+                                checkboxes.forEach(cb => cb.checked = false);
+                            } else {
+                                checkboxes.forEach(cb => cb.checked = true);
+                            }
+                        });
+                    }
 
                     // Aggiungi il giorno al corpo del mese
                     monthBody.appendChild(daySection);
