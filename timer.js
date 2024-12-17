@@ -854,7 +854,7 @@ function saveTimerChanges() {
             siteName: siteName,
             worktypeName: worktypeName,
             link: link,
-            accumulatedElapsedTime: accumulatedSeconds,
+            accumulatedElapsedTime: accumulatedSeconds, // Sovrascrive il valore precedente
             hourlyRate: hourlyRate
         };
 
@@ -863,13 +863,67 @@ function saveTimerChanges() {
         }
 
         if (newEndTime) {
-            updateData.endTime = firebase.firestore.Timestamp.fromDate(newEndTime);
-        } else {
-            updateData.endTime = firebase.firestore.FieldValue.delete();
-        }
+            // Abbiamo endTime e startTime, dunque il timer va chiuso
+            if (newStartTime) {
+                const totalElapsedTime = (newEndTime - newStartTime) / 1000;
+                const timeLogData = {
+                    uid: currentUser.uid,
+                    clientId: clientId,
+                    siteId: siteId,
+                    worktypeId: worktypeId,
+                    clientName: clientName,
+                    siteName: siteName,
+                    worktypeName: worktypeName,
+                    link: link || '',
+                    startTime: firebase.firestore.Timestamp.fromDate(newStartTime),
+                    endTime: firebase.firestore.Timestamp.fromDate(newEndTime),
+                    duration: totalElapsedTime,
+                    isReported: false,
+                    isDeleted: false,
+                    hourlyRate: hourlyRate
+                };
 
-        return db.collection('timers').doc(timerId).update(updateData)
-            .then(() => {
+                return db.collection('timeLogs').add(timeLogData)
+                    .then(() => {
+                        updateData.isActive = false;
+                        updateData.endTime = firebase.firestore.Timestamp.fromDate(newEndTime);
+                        return db.collection('timers').doc(timerId).update(updateData);
+                    })
+                    .then(() => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Modifiche Salvate',
+                            text: 'Il timer è stato aggiornato con successo e segnato come concluso.',
+                            confirmButtonText: 'OK'
+                        });
+                        $('#edit-timer-modal').modal('hide');
+
+                        const timer = activeTimers.find(t => t.id === timerId);
+                        if (timer) {
+                            const index = activeTimers.indexOf(timer);
+                            if (index > -1) {
+                                activeTimers.splice(index, 1);
+                            }
+                            const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
+                            if (oldCard) {
+                                oldCard.parentElement.remove();
+                            }
+                        }
+                    });
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Attenzione',
+                    text: 'Per impostare una data/ora di fine devi prima specificare una data/ora di inizio.',
+                    confirmButtonText: 'OK'
+                });
+                return Promise.reject('No start time set');
+            }
+        } else {
+            // Nessuna endTime, solo aggiornamento dei dati del timer
+            updateData.endTime = firebase.firestore.FieldValue.delete();
+
+            return db.collection('timers').doc(timerId).update(updateData).then(() => {
                 Swal.fire({
                     icon: 'success',
                     title: 'Modifiche Salvate',
@@ -883,22 +937,46 @@ function saveTimerChanges() {
                     timer.clientId = clientId;
                     timer.siteId = siteId;
                     timer.worktypeId = worktypeId;
-                    timer.clientName = document.getElementById('edit-client-select').selectedOptions[0].text;
-                    timer.siteName = document.getElementById('edit-site-select').selectedOptions[0].text;
-                    timer.worktypeName = document.getElementById('edit-worktype-select').selectedOptions[0].text;
+                    timer.clientName = clientName;
+                    timer.siteName = siteName;
+                    timer.worktypeName = worktypeName;
                     timer.link = link;
-                    timer.accumulatedElapsedTime = parseFloat(accumulatedSeconds);
-                    timer.hourlyRate = parseFloat(updateData.hourlyRate); // Qui usiamo updateData.hourlyRate
+                    timer.accumulatedElapsedTime = accumulatedSeconds;
+                    timer.hourlyRate = parseFloat(hourlyRate);
 
-                    const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
-                    if (oldCard) {
-                        oldCard.parentElement.remove();
+                    // Se il timer non è in pausa, aggiorna lastStartTime nel database per evitare somme errate dopo il reload
+                    if (!timer.isPaused) {
+                        // Imposta lastStartTime al tempo attuale nel DB
+                        return db.collection('timers').doc(timerId).update({
+                            lastStartTime: firebase.firestore.FieldValue.serverTimestamp()
+                        }).then(() => {
+                            // Aggiorna anche la logica locale
+                            timer.lastStartTime = new Date();
+
+                            const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
+                            if (oldCard) {
+                                oldCard.parentElement.remove();
+                            }
+
+                            const newCard = createTimerCard(timer);
+                            document.getElementById('timer-cards').appendChild(newCard);
+
+                            // Riavvia il conteggio dal nuovo accumulato
+                            clearInterval(timer.intervalId);
+                            startTimer(timer);
+                        });
+                    } else {
+                        const oldCard = document.querySelector(`.timer-card[data-timer-id="${timer.id}"]`);
+                        if (oldCard) {
+                            oldCard.parentElement.remove();
+                        }
+
+                        const newCard = createTimerCard(timer);
+                        document.getElementById('timer-cards').appendChild(newCard);
                     }
-
-                    const newCard = createTimerCard(timer);
-                    document.getElementById('timer-cards').appendChild(newCard);
                 }
             });
+        }
     }).catch(error => {
         console.error('Errore nel salvataggio delle modifiche del timer:', error);
         Swal.fire({
