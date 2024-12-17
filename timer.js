@@ -159,6 +159,23 @@ async function initializeTimerEvents() {
     timerDiv.style.display = 'none';
     timerDiv.innerHTML = timerTemplate;
     document.body.appendChild(timerDiv);
+    
+    // Inizializza qui flatpickr per i campi della modale, UNA VOLTA SOLA
+    flatpickr('#edit-start-time', {
+        enableTime: true,
+        enableSeconds: true,
+        time_24hr: true,
+        dateFormat: "d/m/Y H:i:S",
+        locale: "it"
+    });
+    
+    flatpickr('#edit-end-time', {
+        enableTime: true,
+        enableSeconds: true,
+        time_24hr: true,
+        dateFormat: "d/m/Y H:i:S",
+        locale: "it"
+    });
 
     clientSelect = document.getElementById('client-select');
     siteSelect = document.getElementById('site-select');
@@ -274,7 +291,6 @@ async function initializeTimerEvents() {
             console.error('Errore nel caricamento dei timer attivi:', error);
         });
 
-    // Inizializza gli eventi della modale
     initializeEditModalEvents();
 }
 
@@ -587,22 +603,6 @@ function initializeEditModalEvents() {
             deleteTimerFromModal();
         });
     }
-
-    flatpickr('#edit-start-time', {
-        enableTime: true,
-        enableSeconds: true,
-        time_24hr: true,
-        dateFormat: "d/m/Y H:i:S",
-        locale: "it"
-    });
-
-    flatpickr('#edit-end-time', {
-        enableTime: true,
-        enableSeconds: true,
-        time_24hr: true,
-        dateFormat: "d/m/Y H:i:S",
-        locale: "it"
-    });
 }
 
 // Funzione per aprire la modale di modifica timer
