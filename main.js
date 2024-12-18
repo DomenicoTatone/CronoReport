@@ -12,18 +12,17 @@ auth.onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
         console.log("Utente autenticato:", currentUser.uid);
-        // Carica la sezione predefinitaa
+
         loadSection('data-management');
-        // Inizializza i timer solo dopo che l'utente è confermato autenticato
+
         await initializeTimerEvents();
+
+        loadSection('saved-timers');
     } else {
         currentUser = null;
-        // Reindirizza a login.html se non autenticato
         window.location.href = 'login.html';
     }
 });
-
-// --- Sezione Gestione Dati ---
 
 // Template per la sezione Gestione Dati
 const dataManagementTemplate = `
@@ -146,7 +145,11 @@ function loadSection(section) {
             break;
         case 'saved-timers':
             contentSection.innerHTML = savedTimersTemplate;
-            initializeSavedTimersEvents();
+            if (currentUser) {
+                initializeSavedTimersEvents();
+            } else {
+                console.error("currentUser non definito, impossibile inizializzare saved timers.");
+            }
             break;
         case 'recycle-bin':
             contentSection.innerHTML = savedTimersTemplate; // Use the updated template

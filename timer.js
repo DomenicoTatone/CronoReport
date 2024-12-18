@@ -609,10 +609,28 @@ function initializeEditModalEvents() {
 function openEditTimerModal(timer) {
     document.getElementById('edit-timer-id').value = timer.id;
 
-    loadAllClientsForEditSelect(document.getElementById('edit-client-select'), timer.clientId)
-        .then(() => loadAllSitesForEditSelect(document.getElementById('edit-site-select'), timer.clientId, timer.siteId))
-        .then(() => loadAllWorktypesForEditSelect(document.getElementById('edit-worktype-select'), timer.clientId, timer.worktypeId))
+    const clientSelect = document.getElementById('edit-client-select');
+    const siteSelect = document.getElementById('edit-site-select');
+    const worktypeSelect = document.getElementById('edit-worktype-select');
+
+    // Carichiamo i dropdown con i valori attuali
+    loadAllClientsForEditSelect(clientSelect, timer.clientId)
+        .then(() => loadAllSitesForEditSelect(siteSelect, timer.clientId, timer.siteId))
+        .then(() => loadAllWorktypesForEditSelect(worktypeSelect, timer.clientId, timer.worktypeId))
         .catch(error => console.error('Errore nel caricamento dati per la modale di modifica:', error));
+
+    // Ogni volta che cambia il cliente, ricarichiamo siti e worktypes
+    clientSelect.addEventListener('change', () => {
+        const newClientId = clientSelect.value;
+        if (newClientId) {
+            loadAllSitesForEditSelect(siteSelect, newClientId, '')
+                .then(() => loadAllWorktypesForEditSelect(worktypeSelect, newClientId, ''))
+                .catch(error => console.error("Errore durante l'aggiornamento di siti e tipi di lavoro:", error));
+        } else {
+            siteSelect.innerHTML = '<option value="">--Seleziona Sito--</option>';
+            worktypeSelect.innerHTML = '<option value="">--Seleziona Tipo di Lavoro--</option>';
+        }
+    });
 
     document.getElementById('edit-link-input').value = timer.link || '';
     document.getElementById('edit-accumulated-time').value = secondsToHHMMSS(timer.accumulatedElapsedTime || 0);

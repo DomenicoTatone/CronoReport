@@ -2,39 +2,34 @@
 
 // Funzione per caricare i timer salvati in base ai filtri
 function loadSavedTimers(filters = {}) {
-    // Svuota la lista dei timer salvati
     const savedTimersList = document.getElementById('savedTimersAccordion');
     savedTimersList.innerHTML = '';
 
-    // Svuota la sezione degli importi non riscossi
     const amountsSection = document.getElementById('unreported-amounts-section');
     if (amountsSection) {
         amountsSection.remove();
     }
 
-    // Definizione della query per ottenere i timer dal database
     let query = db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', false);
 
-    // Applica i filtri se presenti
     if (filters.startDate) {
         query = query.where('startTime', '>=', firebase.firestore.Timestamp.fromDate(new Date(filters.startDate)));
     }
     if (filters.endDate) {
         const endDateObj = new Date(filters.endDate);
-        endDateObj.setHours(23, 59, 59, 999); // Include tutta la giornata
+        endDateObj.setHours(23, 59, 59, 999);
         query = query.where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDateObj));
     }
-    if (filters.clientId) {
-        query = query.where('clientId', '==', filters.clientId);
+    if (filters.client) {
+        query = query.where('clientId', '==', filters.client);
     }
 
-    // Ordina i timer per data di inizio in ordine decrescente
     query.orderBy('startTime', 'desc').get()
         .then(snapshot => {
-            displayedTimers = []; // Reset della lista dei timer visualizzati
-            const unreportedAmounts = {}; // Per calcolare gli importi non riscossi per cliente
+            displayedTimers = [];
+            const unreportedAmounts = {};
 
             if (snapshot.empty) {
                 const noTimersMessage = document.createElement('p');
@@ -43,9 +38,8 @@ function loadSavedTimers(filters = {}) {
                 return;
             }
 
-            const worktypeRates = {}; // Memorizza le tariffe orarie per i tipi di lavoro
+            const worktypeRates = {};
 
-            // Prima, carica tutte le tariffe orarie dei tipi di lavoro
             db.collection('worktypes')
                 .where('uid', '==', currentUser.uid)
                 .get()
@@ -60,15 +54,13 @@ function loadSavedTimers(filters = {}) {
                         const clientName = logData.clientName || 'Cliente Sconosciuto';
                         const worktypeId = logData.worktypeId;
 
-                        // Aggiungi il timer all'array dei timer visualizzati
                         displayedTimers.push({
                             id: doc.id,
                             data: logData
                         });
 
-                        // Calcola l'importo se il timer non è reportato
                         if (!logData.isReported) {
-                            const durationInHours = logData.duration / 3600; // Converti la durata in ore
+                            const durationInHours = logData.duration / 3600;
                             const hourlyRate = worktypeRates[worktypeId] || 0;
                             const amount = durationInHours * hourlyRate;
 
@@ -79,10 +71,7 @@ function loadSavedTimers(filters = {}) {
                         }
                     });
 
-                    // Chiamata alla funzione displayTimers con displayedTimers
                     displayTimers(displayedTimers);
-
-                    // Visualizza gli importi non riscossi
                     displayUnreportedAmounts(unreportedAmounts);
                 })
                 .catch(error => {

@@ -5,55 +5,58 @@ let displayedTimers = []; // Array per memorizzare i timer visualizzati
 let lastOperation = null;
 let worktypeRates = {}; // Definiamo la variabile worktypeRates
 
-// Funzione per inizializzare la sezione Timer Salvati
+// Funzione aggiornata per inizializzare gli eventi dei Timer Salvati
 async function initializeSavedTimersEvents() {
+    if (!currentUser) {
+        console.error("currentUser non definito in initializeSavedTimersEvents. Interruzione.");
+        return;
+    }
+
     const savedTimersList = document.getElementById('savedTimersAccordion');
+    if (!savedTimersList) {
+        console.error("Elemento 'savedTimersAccordion' non trovato nel DOM.");
+        return;
+    }
+
     const filterTimersBtn = document.getElementById('filter-timers-btn');
     const unmarkActionSelect = document.getElementById('unmark-action-select');
     const applyActionBtn = document.getElementById('apply-action-btn');
     const undoActionBtn = document.getElementById('undo-action-btn');
 
-    // Elementi aggiunti per le nuove funzionalità
     const searchTimersInput = document.getElementById('search-timers-input');
     const exportGoogleDocBtn = document.getElementById('export-google-doc-btn');
     const exportGoogleSheetBtn = document.getElementById('export-google-sheet-btn');
 
-    // Disabilita i pulsanti di esportazione inizialmente
     if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = true;
     if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = true;
 
-    // Verifica se il client delle Google API è già inizializzato
     if (typeof gapiInited !== 'undefined' && typeof gisInited !== 'undefined' && gapiInited && gisInited) {
-        // Abilita i pulsanti di esportazione
         if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
         if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
     } else {
-        // Aggiungi un listener per abilitare i pulsanti una volta che il client è pronto
         document.addEventListener('google-api-initialized', () => {
             if (exportGoogleDocBtn) exportGoogleDocBtn.disabled = false;
             if (exportGoogleSheetBtn) exportGoogleSheetBtn.disabled = false;
         });
     }
 
-    if (!savedTimersList) {
-        console.error("Elemento 'savedTimersAccordion' non trovato nel DOM.");
-        return;
-    }
-
-    // Carica i clienti nel filtro
+    console.log("Carico i clienti per il filtro...");
     await loadClientsForFilter();
 
-    // Carica le tariffe dei tipi di lavoro
+    console.log("Carico le tariffe dei tipi di lavoro...");
     await loadWorktypeRates();
 
-    // Event listeners per i pulsanti di azione
     if (filterTimersBtn) {
-        filterTimersBtn.addEventListener('click', filterTimers);
+        filterTimersBtn.addEventListener('click', () => {
+            console.log("Cliccato Filtra Timer");
+            filterTimers();
+        });
     }
 
     if (applyActionBtn) {
         applyActionBtn.addEventListener('click', () => {
             const selectedAction = unmarkActionSelect.value;
+            console.log("Azione selezionata:", selectedAction);
             switch (selectedAction) {
                 case 'unmark-all':
                     unmarkAllTimers();
@@ -78,6 +81,7 @@ async function initializeSavedTimersEvents() {
 
     if (undoActionBtn) {
         undoActionBtn.addEventListener('click', () => {
+            console.log("Cliccato Annulla Ultima Operazione");
             if (!lastOperation) {
                 Swal.fire({
                     icon: 'info',
@@ -113,29 +117,43 @@ async function initializeSavedTimersEvents() {
         });
     }
 
-    // Event listener per la ricerca
     if (searchTimersInput) {
         searchTimersInput.addEventListener('input', () => {
             const searchTerm = searchTimersInput.value.trim().toLowerCase();
+            console.log("Ricerca timer con termine:", searchTerm);
             filterDisplayedTimers(searchTerm);
         });
     }
 
-    // Event listeners per i pulsanti di esportazione
     if (exportGoogleDocBtn) {
         exportGoogleDocBtn.addEventListener('click', () => {
+            console.log("Cliccato Esporta in Google Docs");
             exportTimersToGoogleDoc();
         });
     }
 
     if (exportGoogleSheetBtn) {
         exportGoogleSheetBtn.addEventListener('click', () => {
+            console.log("Cliccato Esporta in Google Sheets");
             exportTimersToGoogleSheet();
         });
     }
 
-    // Carica tutti i timer salvati inizialmente
+    console.log("Carico tutti i timer salvati...");
     await loadSavedTimers();
+
+    const saveEditedBtn = document.getElementById('save-edited-saved-timer-btn');
+    if (saveEditedBtn) {
+        console.log("Aggiungo eventListener a #save-edited-saved-timer-btn");
+        saveEditedBtn.addEventListener('click', () => {
+            console.log("Cliccato bottone Salva Modifiche timer salvato");
+            saveEditedSavedTimer();
+        });
+    } else {
+        console.warn("Non ho trovato il pulsante #save-edited-saved-timer-btn nel DOM al termine di initializeSavedTimersEvents");
+    }
+
+    console.log("Fine initializeSavedTimersEvents");
 }
 
 // Funzione per caricare le tariffe dei tipi di lavoro
