@@ -270,6 +270,10 @@ function setupReportSection() {
         const filterSite = document.getElementById('filter-site').value;
         const filterWorktype = document.getElementById('filter-worktype').value;
 
+        if (!filterClient) {
+            errorMessage += '• Seleziona un cliente per il filtro.\n';
+        }
+
         // Salva la configurazione se è stato inserito un nome
         if (configName) {
             saveReportConfig({

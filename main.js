@@ -17,7 +17,6 @@ auth.onAuthStateChanged(async (user) => {
 
         await initializeTimerEvents();
 
-        loadSection('saved-timers');
     } else {
         currentUser = null;
         window.location.href = 'login.html';

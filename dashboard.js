@@ -1,3 +1,5 @@
+// dashboard.js
+
 let earningsChartViewMode = 'combined';
 const MAX_TOTAL_TIMELOGS = 500;
 

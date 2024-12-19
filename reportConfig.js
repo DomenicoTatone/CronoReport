@@ -71,8 +71,7 @@ const reportTemplate = `
                         <!-- Filtri per cliente, sito e tipo di lavoro -->
                         <div class="form-group">
                             <label for="filter-client" class="font-weight-bold">Filtra per Cliente:</label>
-                            <select id="filter-client" class="form-control">
-                                <option value="">Tutti i Clienti</option>
+                            <select id="filter-client" class="form-control" required>
                             </select>
                         </div>
                         <div class="form-group">
@@ -371,8 +370,10 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, r
             tableColumn.push("Tariffa Oraria (€)");
         }
         tableColumn.push("Link", "Tempo Lavorato", "Importo (€)");
+    
+        const linkColumnIndex = includeHourlyRate ? 3 : 2; // Determina l'indice della colonna Link
+    
         const tableRows = [];
-
         reportData.forEach(item => {
             const rowData = [
                 item.date,
@@ -381,65 +382,64 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, r
             if (includeHourlyRate) {
                 rowData.push(item.hourlyRate);
             }
+            // Metti un placeholder per il link, verrà gestito dopo
             rowData.push('', item.timeWorked, item.amount);
             tableRows.push(rowData);
         });
-
-        // Determina l'indice della colonna del link
-        const linkColumnIndex = includeHourlyRate ? 3 : 2;
-
+    
         // Aggiungi la tabella usando autoTable
         doc.autoTable({
             head: [tableColumn],
             body: tableRows,
             startY: startY,
-            styles: { cellWidth: 'wrap', fontSize: 10 },
+            styles: { fontSize: 10 },
+            // Imposta uno stile personalizzato per la colonna Link
+            columnStyles: {
+                [linkColumnIndex]: { cellWidth: 50 } // ad es. 50 unità di larghezza
+            },
             didParseCell: function (data) {
-                if (data.section === 'body' && data.column.index === linkColumnIndex) { // Solo nel corpo della tabella
-                    data.cell.text = ''; // Rimuovi il testo dalla cella
+                if (data.section === 'body' && data.column.index === linkColumnIndex) {
+                    data.cell.text = ''; // Rimuovi il testo dalla cella per il link
                 }
             },
             didDrawCell: function (data) {
-                if (data.section === 'body' && data.column.index === linkColumnIndex) { // Solo nel corpo della tabella
+                if (data.section === 'body' && data.column.index === linkColumnIndex) {
                     const link = reportData[data.row.index].link;
                     if (link) {
                         // Imposta il colore del testo a blu
                         doc.setTextColor(0, 0, 255);
                         const linkText = extractDomainName(link);
-
-                        // Calcola la posizione X e Y per centrare il testo verticalmente
+    
+                        // Calcola posizione X e Y per centrare verticalmente il testo
                         const xPos = data.cell.x + data.cell.padding('left');
-
-                        // Calcola l'altezza del testo
                         const textHeight = doc.getTextDimensions(linkText).h;
                         const cellHeight = data.cell.height - data.cell.padding('top') - data.cell.padding('bottom');
                         const yPos = data.cell.y + data.cell.padding('top') + (cellHeight + textHeight) / 2 - 1;
-
-                        // Scrivi il testo del link e aggiungi il link
+    
                         doc.textWithLink(linkText, xPos, yPos, { url: link });
-
-                        // Ripristina il colore del testo a nero per le altre celle
+    
+                        // Ripristina il colore del testo a nero per le celle successive
                         doc.setTextColor(0, 0, 0);
                     }
                 }
             },
             headStyles: {
-                fillColor: [102, 126, 234] // Colore di sfondo della testata
+                fillColor: [102, 126, 234] // colore di sfondo per l'intestazione
             },
             alternateRowStyles: {
-                fillColor: [240, 246, 248] // Colore di sfondo alternato
+                fillColor: [240, 246, 248] // colore sfondo righe alternate
             }
         });
-
+    
         // Aggiungi l'importo totale
         doc.setFontSize(14);
         doc.setTextColor(0, 0, 0);
         doc.text(`Totale: € ${totalAmount.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
-
+    
         // Salva il PDF
         doc.save(`${reportFileName}.pdf`);
     }
-
+    
     // Inizia la generazione del PDF
     addLogoAndGeneratePDF();
 }
