@@ -310,6 +310,7 @@ function setupReportSection() {
         // Costruisci la query Firestore con i filtri
         let query = db.collection('timeLogs')
             .where('uid', '==', currentUser.uid)
+            .where('isDeleted', '==', false)
             .where('startTime', '>=', firebase.firestore.Timestamp.fromDate(startDate))
             .where('startTime', '<=', firebase.firestore.Timestamp.fromDate(endDate));
 
