@@ -87,7 +87,7 @@ const savedTimersTemplate = `
 </div>
 
 <!-- Modal per impostare il promemoria -->
-<div class="modal fade" id="setReminderModal" tabindex="-1" role="dialog" aria-labelledby="setReminderModalLabel" aria-hidden="true">
+<div class="modal fade" id="setReminderModal" tabindex="-1" role="dialog" aria-labelledby="setReminderModalLabel">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
@@ -118,7 +118,7 @@ const savedTimersTemplate = `
 </div>
 
 <!-- Modal per modificare un timer salvato -->
-<div class="modal fade" id="edit-saved-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editSavedTimerModalLabel" aria-hidden="true">
+<div class="modal fade" id="edit-saved-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editSavedTimerModalLabel">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-info text-white">

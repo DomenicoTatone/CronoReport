@@ -94,7 +94,7 @@ const timerTemplate = `
 </div>
 
 <!-- Modale per modificare il timer -->
-<div class="modal fade" id="edit-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
+<div class="modal fade" id="edit-timer-modal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
