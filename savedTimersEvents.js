@@ -140,8 +140,9 @@ async function initializeSavedTimersEvents() {
     }
 
     console.log("Carico tutti i timer salvati...");
-    await loadSavedTimers();
+    await loadSavedTimers(); // Assicurati che i timer e il DOM siano pronti
 
+    // QUI aggiungiamo i listener ai pulsanti all'interno della modale, dopo che i timer sono caricati e il DOM è pronto
     const saveEditedBtn = document.getElementById('save-edited-saved-timer-btn');
     if (saveEditedBtn) {
         console.log("Aggiungo eventListener a #save-edited-saved-timer-btn");
@@ -151,6 +152,41 @@ async function initializeSavedTimersEvents() {
         });
     } else {
         console.warn("Non ho trovato il pulsante #save-edited-saved-timer-btn nel DOM al termine di initializeSavedTimersEvents");
+    }
+
+    // Aggiungiamo il listener per il pulsante "Elimina Timer" allo stesso modo
+    const deleteSavedTimerBtn = document.getElementById('delete-saved-timer-btn');
+    if (deleteSavedTimerBtn) {
+        console.log("Aggiungo eventListener a #delete-saved-timer-btn");
+        deleteSavedTimerBtn.addEventListener('click', () => {
+            const timerId = document.getElementById('edit-saved-timer-id').value.trim();
+            if (!timerId) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Errore',
+                    text: 'Impossibile trovare il timer da eliminare.',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Sei sicuro?',
+                text: 'Vuoi eliminare questo timer? Sarà spostato nel cestino.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sì, elimina!',
+                cancelButtonText: 'Annulla'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    deleteTimerById(timerId);
+                }
+            });
+        });
+    } else {
+        console.warn("Non ho trovato il pulsante #delete-saved-timer-btn nel DOM al termine di initializeSavedTimersEvents");
     }
 
     console.log("Fine initializeSavedTimersEvents");

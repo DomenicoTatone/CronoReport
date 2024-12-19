@@ -169,7 +169,11 @@ const savedTimersTemplate = `
         </form>
       </div>
       <div class="modal-footer">
+        <!-- Pulsante Elimina Timer -->
+        <button type="button" class="btn btn-danger" id="delete-saved-timer-btn">Elimina Timer</button>
+        <!-- Pulsante Annulla -->
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Annulla</button>
+        <!-- Pulsante Salva Modifiche -->
         <button type="button" class="btn btn-primary" id="save-edited-saved-timer-btn">Salva Modifiche</button>
       </div>
     </div>
@@ -221,25 +225,40 @@ savedTimersDiv.style.display = 'none'; // Nascondi il template
 savedTimersDiv.innerHTML = savedTimersTemplate;
 document.body.appendChild(savedTimersDiv);
 
-// Attendi che il DOM sia caricato
-document.addEventListener('DOMContentLoaded', () => {
-    const saveEditedBtn = document.getElementById('save-edited-saved-timer-btn');
-    if (saveEditedBtn) {
-        saveEditedBtn.addEventListener('click', () => {
-            saveEditedSavedTimer();
+function deleteTimerById(timerId) {
+    const timerRef = db.collection('timeLogs').doc(timerId);
+    timerRef.update({
+        isDeleted: true,
+        deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+        Swal.fire({
+            icon: 'success',
+            title: 'Timer Eliminato',
+            text: 'Il timer è stato spostato nel cestino.',
+            confirmButtonText: 'OK'
         });
-    } else {
-    }
-});
+        // Chiudi la modale
+        $('#edit-saved-timer-modal').modal('hide');
+        // Ricarica la lista dei timer salvati per riflettere il cambiamento
+        const filters = getCurrentFilters();
+        loadSavedTimers(filters);
+    }).catch(error => {
+        console.error('Errore durante l\'eliminazione del timer:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Errore',
+            text: 'Si è verificato un errore durante l\'eliminazione del timer.',
+            confirmButtonText: 'OK'
+        });
+    });
+}
 
 // Funzione per creare l'elemento HTML di un timer salvato come riga di tabella
 function createTimerRow(timerId, logData, isRecycleBin = false) {
     const row = document.createElement('tr');
 
-    // Colonna per la checkbox (solo se non siamo nel cestino)
     const checkboxCell = document.createElement('td');
     checkboxCell.classList.add('text-center');
-
     if (!isRecycleBin) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -247,10 +266,7 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
         checkbox.value = timerId;
         checkbox.id = 'checkbox-' + timerId;
         checkboxCell.appendChild(checkbox);
-    } else {
-        checkboxCell.textContent = ''; 
     }
-
     row.appendChild(checkboxCell);
 
     const siteCell = document.createElement('td');
@@ -275,11 +291,11 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
 
     const linkCell = document.createElement('td');
     if (logData.link) {
-        const linkAnchor = document.createElement('a');
-        linkAnchor.href = logData.link;
-        linkAnchor.target = '_blank';
-        linkAnchor.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>';
-        linkCell.appendChild(linkAnchor);
+        const linkElement = document.createElement('a');
+        linkElement.href = logData.link;
+        linkElement.target = '_blank';
+        linkElement.innerHTML = '<i class="fas fa-external-link-alt mr-1"></i>';
+        linkCell.appendChild(linkElement);
     } else {
         linkCell.textContent = 'N/A';
     }
@@ -290,65 +306,28 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     if (logData.isReported) {
         const checkmarkIcon = document.createElement('i');
         checkmarkIcon.classList.add('fas', 'fa-check-circle', 'text-success');
-        checkmarkIcon.setAttribute('title', 'Reportato');
-        checkmarkIcon.setAttribute('data-toggle', 'tooltip');
         statusCell.appendChild(checkmarkIcon);
     } else {
         const pendingIcon = document.createElement('i');
         pendingIcon.classList.add('fas', 'fa-hourglass-half', 'text-warning');
-        pendingIcon.setAttribute('title', 'Non Reportato');
-        pendingIcon.setAttribute('data-toggle', 'tooltip');
         statusCell.appendChild(pendingIcon);
     }
     row.appendChild(statusCell);
 
+    // Azioni: RIMOSSO IL PULSANTE ELIMINA, rimane solo pulsante Modifica
     const actionCell = document.createElement('td');
     actionCell.classList.add('text-center', 'align-middle');
 
-    if (isRecycleBin) {
-        // Pulsanti per il Cestino
-        const restoreBtn = document.createElement('button');
-        restoreBtn.classList.add('btn', 'btn-sm', 'btn-success', 'mr-2');
-        restoreBtn.setAttribute('title', 'Ripristina Timer');
-        restoreBtn.setAttribute('data-toggle', 'tooltip');
-        restoreBtn.innerHTML = '<i class="fas fa-undo-alt"></i>';
-        restoreBtn.addEventListener('click', () => {
-            restoreTimer(timerId, row);
-        });
-        actionCell.appendChild(restoreBtn);
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger');
-        deleteBtn.setAttribute('title', 'Elimina Definitivamente');
-        deleteBtn.setAttribute('data-toggle', 'tooltip');
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        deleteBtn.addEventListener('click', () => {
-            permanentlyDeleteTimer(timerId, row);
-        });
-        actionCell.appendChild(deleteBtn);
-    } else {
-        // Pulsante Elimina
-        const deleteBtn = document.createElement('button');
-        deleteBtn.classList.add('btn', 'btn-sm', 'btn-danger', 'mr-2');
-        deleteBtn.setAttribute('title', 'Elimina Timer');
-        deleteBtn.setAttribute('data-toggle', 'tooltip');
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        deleteBtn.addEventListener('click', () => {
-            deleteTimer(timerId, row);
-        });
-        actionCell.appendChild(deleteBtn);
-
-        // Pulsante Modifica
-        const editBtn = document.createElement('button');
-        editBtn.classList.add('btn', 'btn-sm', 'btn-info');
-        editBtn.setAttribute('title', 'Modifica Timer');
-        editBtn.setAttribute('data-toggle', 'tooltip');
-        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-        editBtn.addEventListener('click', () => {
-            openEditSavedTimerModal(timerId);
-        });
-        actionCell.appendChild(editBtn);
-    }
+    // Pulsante Modifica
+    const editBtn = document.createElement('button');
+    editBtn.classList.add('btn', 'btn-sm', 'btn-info');
+    editBtn.setAttribute('title', 'Modifica Timer');
+    editBtn.setAttribute('data-toggle', 'tooltip');
+    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+    editBtn.addEventListener('click', () => {
+        openEditSavedTimerModal(timerId);
+    });
+    actionCell.appendChild(editBtn);
 
     row.appendChild(actionCell);
 
