@@ -157,3 +157,7 @@ canvas#worktypeDistributionChart {
     white-space: normal; /* testo su più linee se necessario */
     word-wrap: break-word;
 }
+
+#content-section {
+    margin-bottom: 80px;
+}
