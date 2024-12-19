@@ -257,17 +257,20 @@ function deleteTimerById(timerId) {
 function createTimerRow(timerId, logData, isRecycleBin = false) {
     const row = document.createElement('tr');
 
-    const checkboxCell = document.createElement('td');
-    checkboxCell.classList.add('text-center');
+    // Se NON siamo nel cestino, creiamo la colonna checkbox
     if (!isRecycleBin) {
+        const checkboxCell = document.createElement('td');
+        checkboxCell.classList.add('text-center');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.classList.add('form-check-input', 'timer-checkbox');
         checkbox.value = timerId;
         checkbox.id = 'checkbox-' + timerId;
         checkboxCell.appendChild(checkbox);
+        row.appendChild(checkboxCell);
     }
-    row.appendChild(checkboxCell);
+    // Se isRecycleBin è true non creiamo affatto questa colonna,
+    // così la tabella è allineata correttamente con le intestazioni.
 
     const siteCell = document.createElement('td');
     siteCell.innerHTML = `<i class="fas fa-building mr-2"></i>${logData.siteName || 'Sito Sconosciuto'}`;
@@ -282,10 +285,12 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     row.appendChild(durationCell);
 
     const timeCell = document.createElement('td');
+    const startFormatted = logData.startTime ? formatTimeWithSeconds(logData.startTime) : 'N/A';
+    const endFormatted = logData.endTime ? formatTimeWithSeconds(logData.endTime) : 'N/A';
     timeCell.innerHTML = `
-        <i class="fas fa-play mr-1 text-success"></i> ${formatTimeWithSeconds(logData.startTime)} 
+        <i class="fas fa-play mr-1 text-success"></i> ${startFormatted} 
         | 
-        <i class="fas fa-stop mr-1 text-danger"></i> ${formatTimeWithSeconds(logData.endTime)}
+        <i class="fas fa-stop mr-1 text-danger"></i> ${endFormatted}
     `;
     row.appendChild(timeCell);
 
@@ -314,20 +319,30 @@ function createTimerRow(timerId, logData, isRecycleBin = false) {
     }
     row.appendChild(statusCell);
 
-    // Azioni: RIMOSSO IL PULSANTE ELIMINA, rimane solo pulsante Modifica
     const actionCell = document.createElement('td');
     actionCell.classList.add('text-center', 'align-middle');
 
-    // Pulsante Modifica
-    const editBtn = document.createElement('button');
-    editBtn.classList.add('btn', 'btn-sm', 'btn-info');
-    editBtn.setAttribute('title', 'Modifica Timer');
-    editBtn.setAttribute('data-toggle', 'tooltip');
-    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-    editBtn.addEventListener('click', () => {
-        openEditSavedTimerModal(timerId);
-    });
-    actionCell.appendChild(editBtn);
+    if (isRecycleBin) {
+        // Nel cestino: pulsante Ripristina
+        const restoreBtn = document.createElement('button');
+        restoreBtn.classList.add('btn', 'btn-sm', 'btn-success');
+        restoreBtn.innerHTML = '<i class="fas fa-undo"></i> Ripristina';
+        restoreBtn.addEventListener('click', () => {
+            restoreTimer(timerId, row);
+        });
+        actionCell.appendChild(restoreBtn);
+    } else {
+        // Nella scheda normale: pulsante Modifica
+        const editBtn = document.createElement('button');
+        editBtn.classList.add('btn', 'btn-sm', 'btn-info');
+        editBtn.setAttribute('title', 'Modifica Timer');
+        editBtn.setAttribute('data-toggle', 'tooltip');
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+        editBtn.addEventListener('click', () => {
+            openEditSavedTimerModal(timerId);
+        });
+        actionCell.appendChild(editBtn);
+    }
 
     row.appendChild(actionCell);
 
