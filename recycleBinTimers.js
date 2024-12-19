@@ -66,7 +66,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                 return;
             }
 
-            // Raccogli i timer in un array
             let timersArray = [];
             snapshot.forEach(doc => {
                 const logData = doc.data();
@@ -76,7 +75,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                 });
             });
 
-            // Filtra i timer in base al termine di ricerca
             if (searchTerm) {
                 const lowerSearchTerm = searchTerm.toLowerCase();
                 timersArray = timersArray.filter(timer => {
@@ -95,14 +93,13 @@ function loadRecycleBinTimers(searchTerm = '') {
                 });
             }
 
-            // Organizza i timer per cliente, anno e mese usando SEMPRE startTime
+            // Organizza i timer per cliente, anno, mese usando startTime
             const timersByClient = {};
 
             timersArray.forEach(timerObj => {
                 const logData = timerObj.data;
                 const clientName = logData.clientName || 'Cliente Sconosciuto';
 
-                // Usa SEMPRE startTime per determinare anno e mese
                 const startTime = logData.startTime.toDate();
                 const year = startTime.getFullYear();
                 const month = String(startTime.getMonth() + 1).padStart(2, '0');
@@ -125,7 +122,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                 });
             });
 
-            // Generazione dell'HTML per visualizzare i timer raggruppati
             let clientIndex = 0;
             for (const clientName in timersByClient) {
                 clientIndex++;
@@ -133,7 +129,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                 const clientSection = document.createElement('div');
                 clientSection.classList.add('card');
 
-                // Header del Cliente
                 const clientHeader = document.createElement('div');
                 clientHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
                 clientHeader.id = `recycle-heading-${clientId}`;
@@ -146,7 +141,7 @@ function loadRecycleBinTimers(searchTerm = '') {
                 clientButton.setAttribute('aria-controls', `recycle-collapse-${clientId}`);
                 clientButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${clientName}`;
 
-                // Pulsante per Eliminare Cliente
+                // Pulsante per Eliminare Tutto del Cliente
                 const deleteClientBtn = document.createElement('button');
                 deleteClientBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger');
                 deleteClientBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Tutto';
@@ -173,7 +168,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                 clientHeader.appendChild(clientButton);
                 clientHeader.appendChild(clientHeaderActions);
 
-                // Corpo del Cliente
                 const clientCollapse = document.createElement('div');
                 clientCollapse.id = `recycle-collapse-${clientId}`;
                 clientCollapse.classList.add('collapse');
@@ -183,20 +177,15 @@ function loadRecycleBinTimers(searchTerm = '') {
                 clientBody.classList.add('card-body');
 
                 const years = timersByClient[clientName];
-
-                // Ordina gli anni in ordine decrescente
                 const sortedYears = Object.keys(years).sort((a, b) => b - a);
 
                 let yearIndex = 0;
                 sortedYears.forEach(year => {
                     yearIndex++;
                     const yearId = `${clientId}-year-${yearIndex}`;
-
-                    // Sezione per l'Anno
                     const yearSection = document.createElement('div');
                     yearSection.classList.add('card');
 
-                    // Header per l'Anno
                     const yearHeader = document.createElement('div');
                     yearHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
                     yearHeader.id = `recycle-heading-${yearId}`;
@@ -230,13 +219,21 @@ function loadRecycleBinTimers(searchTerm = '') {
                         });
                     });
 
+                    // Pulsante per Ripristinare Anno
+                    const restoreYearBtn = document.createElement('button');
+                    restoreYearBtn.classList.add('btn', 'btn-sm', 'btn-outline-success', 'ml-2');
+                    restoreYearBtn.innerHTML = '<i class="fas fa-undo"></i> Ripristina Anno';
+                    restoreYearBtn.addEventListener('click', () => {
+                        restoreDeletedYearTimers(clientName, year, yearSection);
+                    });
+
                     const yearHeaderActions = document.createElement('div');
                     yearHeaderActions.appendChild(deleteYearBtn);
+                    yearHeaderActions.appendChild(restoreYearBtn);
 
                     yearHeader.appendChild(yearButton);
                     yearHeader.appendChild(yearHeaderActions);
 
-                    // Corpo dell'Anno
                     const yearCollapse = document.createElement('div');
                     yearCollapse.id = `recycle-collapse-${yearId}`;
                     yearCollapse.classList.add('collapse');
@@ -246,20 +243,15 @@ function loadRecycleBinTimers(searchTerm = '') {
                     yearBody.classList.add('card-body');
 
                     const months = years[year];
-
-                    // Ordina i mesi in ordine decrescente
                     const sortedMonths = Object.keys(months).sort((a, b) => b - a);
 
                     let monthIndex = 0;
                     sortedMonths.forEach(month => {
                         monthIndex++;
                         const monthId = `${yearId}-month-${monthIndex}`;
-
-                        // Sezione per il Mese
                         const monthSection = document.createElement('div');
                         monthSection.classList.add('card');
 
-                        // Header per il Mese
                         const monthHeader = document.createElement('div');
                         monthHeader.classList.add('card-header', 'd-flex', 'justify-content-between', 'align-items-center');
                         monthHeader.id = `recycle-heading-${monthId}`;
@@ -274,7 +266,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                         const monthName = getMonthName(parseInt(month));
                         monthButton.innerHTML = `<i class="fas fa-chevron-down mr-2"></i>${monthName}`;
 
-                        // Pulsante per Eliminare Mese
                         const deleteMonthBtn = document.createElement('button');
                         deleteMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-danger', 'ml-2');
                         deleteMonthBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Elimina Mese';
@@ -295,7 +286,6 @@ function loadRecycleBinTimers(searchTerm = '') {
                             });
                         });
 
-                        // Pulsante per Ripristinare Mese
                         const restoreMonthBtn = document.createElement('button');
                         restoreMonthBtn.classList.add('btn', 'btn-sm', 'btn-outline-success', 'ml-2');
                         restoreMonthBtn.innerHTML = '<i class="fas fa-undo"></i> Ripristina Mese';
@@ -314,7 +304,6 @@ function loadRecycleBinTimers(searchTerm = '') {
 
                         monthHeader.appendChild(monthHeaderContainer);
 
-                        // Corpo del Mese
                         const monthCollapse = document.createElement('div');
                         monthCollapse.id = `recycle-collapse-${monthId}`;
                         monthCollapse.classList.add('collapse');
@@ -350,9 +339,7 @@ function loadRecycleBinTimers(searchTerm = '') {
                         table.appendChild(thead);
 
                         const tbody = document.createElement('tbody');
-
                         const timers = months[month];
-
                         timers.sort((a, b) => b.data.startTime.seconds - a.data.startTime.seconds);
 
                         timers.forEach(timerObj => {
@@ -362,18 +349,13 @@ function loadRecycleBinTimers(searchTerm = '') {
                         });
 
                         table.appendChild(tbody);
-
                         monthBody.appendChild(table);
                         monthCollapse.appendChild(monthBody);
-
                         monthSection.appendChild(monthHeader);
                         monthSection.appendChild(monthCollapse);
-
                         yearBody.appendChild(monthSection);
 
-                        $(monthCollapse).collapse({
-                            toggle: false
-                        });
+                        $(monthCollapse).collapse({ toggle: false });
 
                         $(`#recycle-collapse-${monthId}`).on('show.bs.collapse', function () {
                             monthButton.classList.remove('collapsed');
@@ -386,15 +368,11 @@ function loadRecycleBinTimers(searchTerm = '') {
                     });
 
                     yearCollapse.appendChild(yearBody);
-
                     yearSection.appendChild(yearHeader);
                     yearSection.appendChild(yearCollapse);
-
                     clientBody.appendChild(yearSection);
 
-                    $(yearCollapse).collapse({
-                        toggle: false
-                    });
+                    $(yearCollapse).collapse({ toggle: false });
 
                     $(`#recycle-collapse-${yearId}`).on('show.bs.collapse', function () {
                         yearButton.classList.remove('collapsed');
@@ -407,15 +385,11 @@ function loadRecycleBinTimers(searchTerm = '') {
                 });
 
                 clientCollapse.appendChild(clientBody);
-
                 clientSection.appendChild(clientHeader);
                 clientSection.appendChild(clientCollapse);
-
                 recycleBinTimersDiv.appendChild(clientSection);
 
-                $(clientCollapse).collapse({
-                    toggle: false
-                });
+                $(clientCollapse).collapse({ toggle: false });
 
                 $(`#recycle-collapse-${clientId}`).on('show.bs.collapse', function () {
                     clientButton.classList.remove('collapsed');
@@ -458,7 +432,6 @@ function restoreTimer(timerId, rowElement) {
 
 // Funzione per ripristinare tutti i timer di un determinato mese
 function restoreDeletedMonthTimers(clientName, year, month, monthSection) {
-    // Carichiamo tutti i timer eliminati per quel cliente, anno, mese e li ripristiniamo
     db.collection('timeLogs')
         .where('uid', '==', currentUser.uid)
         .where('isDeleted', '==', true)
@@ -508,6 +481,60 @@ function restoreDeletedMonthTimers(clientName, year, month, monthSection) {
                 icon: 'error',
                 title: 'Errore',
                 text: 'Si è verificato un errore durante il ripristino dei timer del mese.',
+                confirmButtonText: 'OK'
+            });
+        });
+}
+
+function restoreDeletedYearTimers(clientName, year, yearSection) {
+    db.collection('timeLogs')
+        .where('uid', '==', currentUser.uid)
+        .where('isDeleted', '==', true)
+        .where('clientName', '==', clientName)
+        .get()
+        .then(snapshot => {
+            const batch = db.batch();
+            let found = false;
+            snapshot.forEach(doc => {
+                const logData = doc.data();
+                const startTime = logData.startTime.toDate();
+                const timerYear = startTime.getFullYear();
+
+                if (timerYear === parseInt(year)) {
+                    batch.update(doc.ref, {
+                        isDeleted: false,
+                        deletedAt: firebase.firestore.FieldValue.delete()
+                    });
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Nessun Timer da Ripristinare',
+                    text: `Non ci sono timer eliminati per l'anno ${year}.`,
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            return batch.commit().then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Anno Ripristinato',
+                    text: `Tutti i timer dell'anno ${year} sono stati ripristinati con successo.`,
+                    confirmButtonText: 'OK'
+                });
+                loadRecycleBinTimers();
+            });
+        })
+        .catch(error => {
+            console.error('Errore durante il ripristino dei timer dell\'anno:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Errore',
+                text: 'Si è verificato un errore durante il ripristino dei timer dell\'anno.',
                 confirmButtonText: 'OK'
             });
         });
