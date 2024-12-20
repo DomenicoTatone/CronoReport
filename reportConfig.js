@@ -102,42 +102,51 @@ const reportTemplate = `
             <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-file-alt mr-2"></i>Genera Report</button>
         </div>
     </form>
-    <div id="report-content" class="mt-5" style="display: none;">
-        <div id="report-header-display" class="text-center mb-4">
-            <!-- Il logo e l'intestazione del report verranno inseriti qui -->
+</div>
+
+<!-- Modal per visualizzare il report -->
+<div class="modal fade" id="reportModal" tabindex="-1" role="dialog" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="reportModalLabel">Report Generato</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Chiudi">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="report-content" style="display: none;">
+            <div id="report-header-display" class="text-center mb-4"></div>
+            <table class="table table-striped table-bordered">
+                <thead class="thead-dark"></thead>
+                <tbody id="report-table-body"></tbody>
+            </table>
+            <h4 class="text-right">Totale: € <span id="total-amount">0.00</span></h4>
+            <div class="text-center">
+                <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
+                    <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
+                </button>
+                <button id="export-google-doc-btn" class="btn btn-primary mt-3 mr-2" disabled>
+                    <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
+                </button>
+                <button id="export-google-sheet-btn" class="btn btn-primary mt-3" disabled>
+                    <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
+                </button>
+            </div>
         </div>
-        <table class="table table-striped table-bordered">
-            <thead class="thead-dark">
-                <!-- Le intestazioni della tabella verranno generate dinamicamente -->
-            </thead>
-            <tbody id="report-table-body">
-                <!-- I dati del report verranno inseriti qui -->
-            </tbody>
-        </table>
-        <h4 class="text-right">Totale: € <span id="total-amount">0.00</span></h4>
-        <div class="text-center">
-            <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
-                <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
-            </button>
-            <button id="export-google-doc-btn" class="btn btn-primary mt-3 mr-2">
-                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Docs
-            </button>
-            <button id="export-google-sheet-btn" class="btn btn-primary mt-3">
-                <i class="fab fa-google-drive mr-2"></i>Esporta in Google Sheets
-            </button>
-        </div>
+      </div>
     </div>
+  </div>
 </div>
 `;
 
-// Inserisci il template nel DOM
 const reportDiv = document.createElement('div');
 reportDiv.id = 'report-template';
 reportDiv.style.display = 'none';
 reportDiv.innerHTML = reportTemplate;
 document.body.appendChild(reportDiv);
 
-// Funzione per estrarre il nome del dominio dall'URL (Definita Globalmente)
+// Funzione per estrarre il nome del dominio dall'URL
 function extractDomainName(url) {
     try {
         const hostname = new URL(url).hostname;
@@ -148,10 +157,10 @@ function extractDomainName(url) {
     }
 }
 
-// Funzione per visualizzare l'anteprima del logo (Definita Globalmente)
+// Funzione per visualizzare l'anteprima del logo
 function displayLogoPreview(base64Data) {
     const previewContainer = document.getElementById('logo-preview-container');
-    previewContainer.innerHTML = ''; // Pulisce il contenuto precedente
+    previewContainer.innerHTML = '';
 
     const imgPreview = document.createElement('img');
     imgPreview.id = 'logo-preview';
@@ -161,13 +170,15 @@ function displayLogoPreview(base64Data) {
     previewContainer.appendChild(imgPreview);
 }
 
-// Funzione per rimuovere l'anteprima del logo (Definita Globalmente)
+// Funzione per rimuovere l'anteprima del logo
 function clearLogoPreview() {
     const previewContainer = document.getElementById('logo-preview-container');
-    previewContainer.innerHTML = '';
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+    }
 }
 
-// Funzioni per caricare i filtri
+// Caricamento filtri
 function loadClients(selectElement) {
     selectElement.innerHTML = '<option value="">--Seleziona Cliente--</option>';
     return db.collection('clients')
@@ -185,7 +196,6 @@ function loadClients(selectElement) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei clienti:', error);
-            // Handle the error but still return a Promise
             return Promise.reject(error);
         });
 }
@@ -200,7 +210,6 @@ function loadSites(selectElement, selectedClientId) {
     return query.get()
         .then(snapshot => {
             if (snapshot.empty) {
-                // Nessun sito disponibile, disabilita il select
                 selectElement.disabled = true;
             } else {
                 selectElement.disabled = false;
@@ -215,7 +224,7 @@ function loadSites(selectElement, selectedClientId) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei siti:', error);
-            throw error; // Propaga l'errore per gestirlo successivamente
+            throw error;
         });
 }
 
@@ -229,7 +238,6 @@ function loadWorktypes(selectElement, selectedClientId) {
     return query.get()
         .then(snapshot => {
             if (snapshot.empty) {
-                // Nessun tipo di lavoro disponibile, disabilita il select
                 selectElement.disabled = true;
             } else {
                 selectElement.disabled = false;
@@ -244,12 +252,15 @@ function loadWorktypes(selectElement, selectedClientId) {
         })
         .catch(error => {
             console.error('Errore nel caricamento dei tipi di lavoro:', error);
-            throw error; // Propaga l'errore per gestirlo successivamente
+            throw error;
         });
 }
 
-// Funzione per caricare le configurazioni salvate da Firebase
+// Funzione per caricare le configurazioni salvate
 function loadSavedConfigs() {
+    const savedConfigSelect = document.getElementById('saved-config-select');
+    const deleteConfigBtn = document.getElementById('delete-config-btn');
+
     savedConfigSelect.innerHTML = '<option value="">-- Seleziona una configurazione --</option>';
     deleteConfigBtn.style.display = 'none';
     db.collection('reportConfigs')
@@ -257,7 +268,7 @@ function loadSavedConfigs() {
         .orderBy('timestamp', 'desc')
         .get()
         .then(snapshot => {
-            savedConfigs = {}; // Reset savedConfigs
+            savedConfigs = {};
             if (!snapshot.empty) {
                 snapshot.forEach(doc => {
                     const config = doc.data();
@@ -280,7 +291,7 @@ function loadSavedConfigs() {
         });
 }
 
-// Funzione per salvare una configurazione del report su Firebase
+// Funzione per salvare una configurazione
 function saveReportConfig(config) {
     db.collection('reportConfigs').add({
         uid: currentUser.uid,
@@ -296,7 +307,7 @@ function saveReportConfig(config) {
             confirmButtonText: 'OK'
         });
         loadSavedConfigs();
-        configNameInput.value = '';
+        document.getElementById('config-name').value = '';
     }).catch(error => {
         console.error('Errore nel salvataggio della configurazione:', error);
         Swal.fire({
@@ -312,10 +323,7 @@ function saveReportConfig(config) {
 async function applySavedConfig(configId) {
     const config = savedConfigs[configId];
     if (config) {
-
         document.getElementById('report-header').value = config.reportHeader;
-
-        // Handle the logo
         companyLogoBase64 = config.companyLogoBase64 || '';
         if (companyLogoBase64) {
             displayLogoPreview(companyLogoBase64);
@@ -325,138 +333,108 @@ async function applySavedConfig(configId) {
     }
 }
 
-// Funzione per generare il PDF usando jsPDF
+// Funzione per generare PDF
 function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
     function addLogoAndGeneratePDF() {
-        let startY = 30; // Posizione Y di partenza
+        let startY = 30;
 
         if (companyLogoBase64) {
             const img = new Image();
             img.src = companyLogoBase64;
             img.onload = function () {
-                const imgHeight = 15; // Altezza del logo per renderlo piccolo
+                const imgHeight = 15;
                 const imgWidth = (img.width * imgHeight) / img.height;
-
-                // Posiziona il logo e l'intestazione sulla stessa linea
                 doc.addImage(companyLogoBase64, 'PNG', 14, 10, imgWidth, imgHeight);
-
-                // Aggiungi l'intestazione accanto al logo
                 doc.setFontSize(16);
                 doc.text(reportHeader, 14 + imgWidth + 10, 20);
-
-                // Imposta la posizione Y per la tabella
                 startY = 30;
-
-                // Genera il contenuto del PDF
                 generatePDFContent(startY);
             };
         } else {
-            // Nessun logo, procedi direttamente
             doc.setFontSize(16);
             doc.text(reportHeader, 14, 20);
-
-            // Genera il contenuto del PDF
             generatePDFContent(startY);
         }
     }
 
     function generatePDFContent(startY) {
-        // Prepara i dati della tabella
         const tableColumn = ["Data", "Tipo di Lavoro"];
         if (includeHourlyRate) {
             tableColumn.push("Tariffa Oraria (€)");
         }
         tableColumn.push("Link", "Tempo Lavorato", "Importo (€)");
-    
-        const linkColumnIndex = includeHourlyRate ? 3 : 2; // Determina l'indice della colonna Link
-    
+
+        const linkColumnIndex = includeHourlyRate ? 3 : 2;
+
         const tableRows = [];
         reportData.forEach(item => {
-            const rowData = [
-                item.date,
-                item.workType
-            ];
+            const rowData = [item.date, item.workType];
             if (includeHourlyRate) {
                 rowData.push(item.hourlyRate);
             }
-            // Metti un placeholder per il link, verrà gestito dopo
             rowData.push('', item.timeWorked, item.amount);
             tableRows.push(rowData);
         });
-    
-        // Aggiungi la tabella usando autoTable
+
         doc.autoTable({
             head: [tableColumn],
             body: tableRows,
             startY: startY,
             styles: { fontSize: 10 },
-            // Imposta uno stile personalizzato per la colonna Link
             columnStyles: {
-                [linkColumnIndex]: { cellWidth: 50 } // ad es. 50 unità di larghezza
+                [linkColumnIndex]: { cellWidth: 50 }
             },
             didParseCell: function (data) {
                 if (data.section === 'body' && data.column.index === linkColumnIndex) {
-                    data.cell.text = ''; // Rimuovi il testo dalla cella per il link
+                    data.cell.text = '';
                 }
             },
             didDrawCell: function (data) {
                 if (data.section === 'body' && data.column.index === linkColumnIndex) {
                     const link = reportData[data.row.index].link;
                     if (link) {
-                        // Imposta il colore del testo a blu
                         doc.setTextColor(0, 0, 255);
                         const linkText = extractDomainName(link);
-    
-                        // Calcola posizione X e Y per centrare verticalmente il testo
                         const xPos = data.cell.x + data.cell.padding('left');
                         const textHeight = doc.getTextDimensions(linkText).h;
                         const cellHeight = data.cell.height - data.cell.padding('top') - data.cell.padding('bottom');
                         const yPos = data.cell.y + data.cell.padding('top') + (cellHeight + textHeight) / 2 - 1;
-    
                         doc.textWithLink(linkText, xPos, yPos, { url: link });
-    
-                        // Ripristina il colore del testo a nero per le celle successive
                         doc.setTextColor(0, 0, 0);
                     }
                 }
             },
             headStyles: {
-                fillColor: [102, 126, 234] // colore di sfondo per l'intestazione
+                fillColor: [102, 126, 234]
             },
             alternateRowStyles: {
-                fillColor: [240, 246, 248] // colore sfondo righe alternate
+                fillColor: [240, 246, 248]
             }
         });
-    
-        // Aggiungi l'importo totale
+
         doc.setFontSize(14);
         doc.setTextColor(0, 0, 0);
         doc.text(`Totale: € ${totalAmount.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
-    
-        // Salva il PDF
         doc.save(`${reportFileName}.pdf`);
     }
-    
-    // Inizia la generazione del PDF
+
     addLogoAndGeneratePDF();
 }
 
-function createGoogleDoc(reportContent, reportFileName) {
-    const doc = {
-        title: reportFileName
-    };
+function exportReportToGoogleSheet(reportValues, fileName) {
+    handleAuthClick(() => {
+        createGoogleSheet(reportValues, fileName);
+    });
+}
 
-    gapi.client.request({
-        path: 'https://docs.googleapis.com/v1/documents',
-        method: 'POST',
-        body: doc
+function createGoogleDoc(reportContent, fileName) {
+    gapi.client.docs.documents.create({
+        title: fileName
     }).then((response) => {
         const documentId = response.result.documentId;
-
-        // Inserisci il contenuto nel documento
         insertContentIntoDoc(documentId, reportContent);
     }, (error) => {
         console.error('Errore durante la creazione del documento:', error);
@@ -464,27 +442,18 @@ function createGoogleDoc(reportContent, reportFileName) {
 }
 
 function insertContentIntoDoc(documentId, reportContent) {
-    const requests = [];
-
-    // Aggiungi il testo al documento
-    requests.push({
+    const requests = [{
         insertText: {
-            location: {
-                index: 1 // Inserisci dopo l'inizio del documento
-            },
+            location: { index: 1 },
             text: reportContent
         }
-    });
+    }];
 
-    gapi.client.request({
-        'path': `https://docs.googleapis.com/v1/documents/${documentId}:batchUpdate`,
-        'method': 'POST',
-        'body': {
-            requests: requests
-        }
+    gapi.client.docs.documents.batchUpdate({
+        documentId: documentId,
+        requests: requests
     }).then((response) => {
         console.log('Contenuto inserito nel documento:', response);
-        // Apri il documento in una nuova scheda
         window.open(`https://docs.google.com/document/d/${documentId}/edit`, '_blank');
     }, (error) => {
         console.error('Errore durante l\'inserimento del contenuto:', error);
@@ -493,7 +462,6 @@ function insertContentIntoDoc(documentId, reportContent) {
 
 function generateReportContentString(reportHeader, reportData, totalAmount, includeHourlyRate) {
     let content = `${reportHeader}\n\n`;
-
     reportData.forEach(item => {
         content += `Data: ${item.date}\n`;
         content += `Tipo di Lavoro: ${item.workType}\n`;
@@ -502,38 +470,18 @@ function generateReportContentString(reportHeader, reportData, totalAmount, incl
         }
         content += `Link: ${item.link}\n`;
         content += `Tempo Lavorato: ${item.timeWorked}\n`;
-        content += `Importo (€): ${item.amount}\n`;
-        content += '\n';
+        content += `Importo (€): ${item.amount}\n\n`;
     });
-
     content += `Totale: € ${totalAmount.toFixed(2)}\n`;
-
     return content;
 }
 
-function createGoogleSheet(reportValues, reportFileName) {
-    const spreadsheet = {
-        properties: {
-            title: reportFileName
-        },
-        sheets: [
-            {
-                properties: {
-                    title: 'Report'
-                }
-            }
-        ]
-    };
-
-    gapi.client.request({
-        path: 'https://sheets.googleapis.com/v4/spreadsheets',
-        method: 'POST',
-        body: spreadsheet
+function createGoogleSheet(reportValues, fileName) {
+    gapi.client.sheets.spreadsheets.create({
+        properties: { title: fileName }
     }).then((response) => {
         const spreadsheetId = response.result.spreadsheetId;
-        const sheetName = 'Report';
-
-        // Inserisci i dati nel foglio
+        const sheetName = response.result.sheets[0].properties.title;
         insertDataIntoSheet(spreadsheetId, sheetName, reportValues);
     }, (error) => {
         console.error('Errore durante la creazione del foglio di calcolo:', error);
@@ -541,20 +489,15 @@ function createGoogleSheet(reportValues, reportFileName) {
 }
 
 function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
-    const range = `${encodeURIComponent(sheetName)}!A1`;
+    const range = `${sheetName}!A1`;
 
-    gapi.client.request({
-        path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append`,
-        method: 'POST',
-        params: {
-            valueInputOption: 'RAW'
-        },
-        body: {
-            values: reportValues
-        }
+    gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        range: range,
+        valueInputOption: 'RAW',
+        values: reportValues
     }).then((response) => {
         console.log('Dati inseriti nel foglio di calcolo:', response);
-        // Apri il foglio di calcolo in una nuova scheda
         window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
     }, (error) => {
         console.error('Errore durante l\'inserimento dei dati:', error);
@@ -563,35 +506,23 @@ function insertDataIntoSheet(spreadsheetId, sheetName, reportValues) {
 
 function generateReportValuesArray(reportHeader, reportData, totalAmount, includeHourlyRate) {
     const values = [];
-
-    // Aggiungi l'intestazione del report
     values.push([reportHeader]);
-    values.push([]); // Riga vuota
-
-    // Aggiungi le intestazioni delle colonne
+    values.push([]);
     const headers = ['Data', 'Tipo di Lavoro'];
-    if (includeHourlyRate) {
-        headers.push('Tariffa Oraria (€)');
-    }
+    if (includeHourlyRate) headers.push('Tariffa Oraria (€)');
     headers.push('Link', 'Tempo Lavorato', 'Importo (€)');
     values.push(headers);
 
-    // Aggiungi le righe dei dati
     reportData.forEach(item => {
         const row = [item.date, item.workType];
-        if (includeHourlyRate) {
-            row.push(item.hourlyRate);
-        }
+        if (includeHourlyRate) row.push(item.hourlyRate);
         row.push(item.link, item.timeWorked, item.amount);
         values.push(row);
     });
 
-    // Aggiungi una riga vuota e il totale
     values.push([]);
     const totalRow = ['', ''];
-    if (includeHourlyRate) {
-        totalRow.push('');
-    }
+    if (includeHourlyRate) totalRow.push('');
     totalRow.push('', 'Totale', totalAmount.toFixed(2));
     values.push(totalRow);
 
