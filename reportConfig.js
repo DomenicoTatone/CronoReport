@@ -121,7 +121,7 @@ const reportTemplate = `
                 <thead class="thead-dark"></thead>
                 <tbody id="report-table-body"></tbody>
             </table>
-            <h4 class="text-right">Totale: € <span id="total-amount">0.00</span></h4>
+            <h4 class="text-left">Totale: € <span id="total-amount">0.00</span></h4>
             <div class="text-center">
                 <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
                     <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
