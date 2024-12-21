@@ -199,9 +199,9 @@ function setupReportSection() {
 
     function generateReport() {
         const reportHeader = document.getElementById('report-header').value.trim();
-        const startDateInputVal = startDateInput.value;
-        const endDateInputVal = endDateInput.value;
-        const configName = configNameInput.value.trim();
+        const startDateInputVal = document.getElementById('start-date').value;
+        const endDateInputVal = document.getElementById('end-date').value;
+        const configName = document.getElementById('config-name').value.trim();
     
         const includeHourlyRate = document.getElementById('include-hourly-rate').checked;
         const onlyUnreported = document.getElementById('only-unreported').checked;
@@ -242,8 +242,15 @@ function setupReportSection() {
             });
         }
     
+        const reportTableBody = document.getElementById('report-table-body');
+        const totalAmountDisplay = document.getElementById('total-amount');
+        const totalHoursDisplay = document.getElementById('total-hours');
         reportTableBody.innerHTML = '';
         totalAmountDisplay.textContent = '0.00';
+        totalHoursDisplay.textContent = '0.00';
+    
+        const reportHeaderDisplay = document.getElementById('report-header-display');
+        const reportContent = document.getElementById('report-content');
     
         const reportFileName = `${reportHeader} - ${startDateInputVal} a ${endDateInputVal}`;
         function sanitizeFileName(fileName) {
@@ -300,6 +307,7 @@ function setupReportSection() {
                 reportTableHeader.innerHTML = tableHeaders;
     
                 let totalAmount = 0;
+                let totalHours = 0; // Somma totale delle ore
                 let reportData = [];
                 let timerIds = [];
     
@@ -312,6 +320,7 @@ function setupReportSection() {
                     const hourlyRate = worktypeRates[worktypeId] || 0;
                     const amount = durationInHours * hourlyRate;
                     totalAmount += amount;
+                    totalHours += durationInHours; // Aggiunta totale ore
     
                     const linkText = logData.link ? extractDomainName(logData.link) : '-';
     
@@ -336,7 +345,9 @@ function setupReportSection() {
                     tdWorkType.textContent = dataRow.workType;
     
                     const tdHourlyRate = document.createElement('td');
-                    tdHourlyRate.textContent = `€ ${dataRow.hourlyRate}`;
+                    if (includeHourlyRate) {
+                        tdHourlyRate.textContent = `€ ${dataRow.hourlyRate}`;
+                    }
     
                     const tdLink = document.createElement('td');
                     if (dataRow.link) {
@@ -365,30 +376,38 @@ function setupReportSection() {
                     reportTableBody.appendChild(tr);
                 });
     
+                // Aggiorna la visualizzazione totale
                 totalAmountDisplay.textContent = totalAmount.toFixed(2);
+                
+                const totalSeconds = Math.floor(totalHours * 3600);
+                const hh = Math.floor(totalSeconds / 3600);
+                const remainder = totalSeconds % 3600;
+                const mm = Math.floor(remainder / 60);
+                const ss = remainder % 60;
+
+                const hhStr = hh.toString().padStart(2, '0');
+                const mmStr = mm.toString().padStart(2, '0');
+                const ssStr = ss.toString().padStart(2, '0');
+
+                totalHoursDisplay.textContent = `${hhStr}:${mmStr}:${ssStr}`;
     
                 markTimersAsReported(timerIds);
     
-                // Pulsante per scaricare il PDF (invariato)
-                document.getElementById('download-pdf-btn').onclick = () => generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate);
-    
-                // **AGGIORNAMENTO QUI**:
-                // Quando si clicca su "Esporta in Google Docs"
+                // Impostazione pulsanti di export PDF/Docs/Sheets
+                document.getElementById('download-pdf-btn').onclick = () => generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, sanitizedReportFileName, includeHourlyRate);
+                
                 if (exportGoogleDocBtn) {
                     exportGoogleDocBtn.onclick = () => {
-                        const reportContentString = generateReportContentString(reportHeader, reportData, totalAmount, includeHourlyRate);
-                        // Prima di esportare, chiamiamo handleAuthClick per gestire il token
+                        const reportContentString = generateReportContentString(reportHeader, reportData, totalHours, totalAmount, includeHourlyRate);
                         handleAuthClick(() => {
                             createGoogleDoc(reportContentString, sanitizedReportFileName);
                         });
                     };
                 }
     
-                // Quando si clicca su "Esporta in Google Sheets"
                 if (exportGoogleSheetBtn) {
                     exportGoogleSheetBtn.onclick = () => {
-                        const reportValuesArray = generateReportValuesArray(reportHeader, reportData, totalAmount, includeHourlyRate);
-                        // Prima di esportare, chiamiamo handleAuthClick per gestire il token
+                        const reportValuesArray = generateReportValuesArray(reportHeader, reportData, totalHours, totalAmount, includeHourlyRate);
                         handleAuthClick(() => {
                             createGoogleSheet(reportValuesArray, sanitizedReportFileName);
                         });
@@ -399,14 +418,14 @@ function setupReportSection() {
                 let filterSiteName = '';
                 let filterWorktypeName = '';
     
-                if (filterClientSelect.value) {
-                    filterClientName = filterClientSelect.options[filterClientSelect.selectedIndex].text;
+                if (document.getElementById('filter-client').value) {
+                    filterClientName = document.getElementById('filter-client').options[document.getElementById('filter-client').selectedIndex].text;
                 }
-                if (filterSiteSelect.value) {
-                    filterSiteName = filterSiteSelect.options[filterSiteSelect.selectedIndex].text;
+                if (document.getElementById('filter-site').value) {
+                    filterSiteName = document.getElementById('filter-site').options[document.getElementById('filter-site').selectedIndex].text;
                 }
-                if (filterWorktypeSelect.value) {
-                    filterWorktypeName = filterWorktypeSelect.options[filterWorktypeSelect.selectedIndex].text;
+                if (document.getElementById('filter-worktype').value) {
+                    filterWorktypeName = document.getElementById('filter-worktype').options[document.getElementById('filter-worktype').selectedIndex].text;
                 }
     
                 const reportDetails = {
@@ -425,7 +444,8 @@ function setupReportSection() {
                     companyLogoBase64: companyLogoBase64,
                     reportName: sanitizedReportFileName,
                     reportDataArray: reportData,
-                    includeHourlyRate: includeHourlyRate
+                    includeHourlyRate: includeHourlyRate,
+                    totalHours: totalHours // salva anche le ore totali nel DB
                 };
     
                 db.collection('reports').add(reportDetails)

@@ -502,12 +502,25 @@ function initializeReportHistoryEvents() {
      * @param {Object} reportData - Dati del report salvato
      */
     function regenerateAndDownloadReport(reportData) {
-        // Utilizza i dati salvati nel report per rigenerare il report
         if (reportData.reportDataArray && reportData.reportDataArray.length > 0) {
             const totalAmount = reportData.totalAmount || 0;
-
-            // Genera il PDF utilizzando i dati salvati
-            generatePDF(reportData.reportHeader, reportData.reportDataArray, totalAmount, reportData.companyLogoBase64, reportData.reportName, reportData.includeHourlyRate);
+            const totalHours = reportData.totalHours || 0; // Recupera le ore totali salvate
+            const includeHourlyRate = reportData.includeHourlyRate || false;
+            const reportHeader = reportData.reportHeader;
+            const reportName = reportData.reportName || 'report';
+            const reportDataArray = reportData.reportDataArray;
+            const companyLogoBase64 = reportData.companyLogoBase64 || '';
+    
+            // Chiama generatePDF con i parametri nell'ordine corretto
+            generatePDF(
+                reportHeader,        // 1. Intestazione
+                reportDataArray,     // 2. Dati del report
+                totalHours,          // 3. Totale Ore
+                totalAmount,         // 4. Totale Importo
+                companyLogoBase64,   // 5. Logo base64
+                reportName,          // 6. Nome del file report
+                includeHourlyRate    // 7. Include Hourly Rate
+            );
         } else {
             Swal.fire({
                 icon: 'info',
@@ -516,7 +529,7 @@ function initializeReportHistoryEvents() {
                 confirmButtonText: 'OK'
             });
         }
-    }
+    }    
 
     // Carica lo storico report all'avvio
     loadReportHistory();

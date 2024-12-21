@@ -121,7 +121,23 @@ const reportTemplate = `
                 <thead class="thead-dark"></thead>
                 <tbody id="report-table-body"></tbody>
             </table>
-            <h4 class="text-left">Totale: € <span id="total-amount">0.00</span></h4>
+            <table class="table table-bordered table-striped mt-4" style="max-width: 300px; margin-left: auto;">
+                <thead class="thead-dark">
+                    <tr>
+                        <th colspan="2" class="text-center">Riepilogo Totali</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Totale Ore</strong></td>
+                        <td><span id="total-hours">0.00</span> h</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Totale Importo</strong></td>
+                        <td>€ <span id="total-amount">0.00</span></td>
+                    </tr>
+                </tbody>
+            </table>
             <div class="text-center">
                 <button id="download-pdf-btn" class="btn btn-success mt-3 mr-2">
                     <i class="fas fa-file-pdf mr-2"></i>Scarica PDF
@@ -334,18 +350,31 @@ async function applySavedConfig(configId) {
 }
 
 // Funzione per generare PDF
-function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
+function generatePDF(reportHeader, reportData, totalHours, totalAmount, companyLogoBase64, reportFileName, includeHourlyRate) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    function addLogoAndGeneratePDF() {
-        let startY = 30;
+    // Funzione per convertire totalHours (decimali) in hh:mm:ss
+    function formatHoursToHMS(hoursDecimal) {
+        const totalSeconds = Math.floor(hoursDecimal * 3600);
+        const hh = Math.floor(totalSeconds / 3600);
+        const remainder = totalSeconds % 3600;
+        const mm = Math.floor(remainder / 60);
+        const ss = remainder % 60;
 
+        const hhStr = hh.toString().padStart(2, '0');
+        const mmStr = mm.toString().padStart(2, '0');
+        const ssStr = ss.toString().padStart(2, '0');
+        return `${hhStr}:${mmStr}:${ssStr}`;
+    }
+
+    function addLogoAndGeneratePDF() {
+        let startY = 30; 
         if (companyLogoBase64) {
             const img = new Image();
             img.src = companyLogoBase64;
             img.onload = function () {
-                const imgHeight = 15;
+                const imgHeight = 15; 
                 const imgWidth = (img.width * imgHeight) / img.height;
                 doc.addImage(companyLogoBase64, 'PNG', 14, 10, imgWidth, imgHeight);
                 doc.setFontSize(16);
@@ -415,9 +444,34 @@ function generatePDF(reportHeader, reportData, totalAmount, companyLogoBase64, r
             }
         });
 
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Totale: € ${totalAmount.toFixed(2)}`, 14, doc.lastAutoTable.finalY + 10);
+        // Convertiamo totalHours in hh:mm:ss
+        const formattedHours = formatHoursToHMS(totalHours);
+
+        const finalY = doc.lastAutoTable.finalY + 10;
+
+        const summaryHead = [["Riepilogo Totali", ""]];
+        const summaryBody = [
+            ["Totale Ore", `${formattedHours}`],
+            ["Totale Importo", `€ ${totalAmount.toFixed(2)}`]
+        ];
+
+        doc.autoTable({
+            head: summaryHead,
+            body: summaryBody,
+            startY: finalY,
+            styles: { fontSize: 12 },
+            headStyles: {
+                fillColor: [102, 126, 234],
+                textColor: 255,
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 40 },
+                1: { cellWidth: 60 },
+            },
+            theme: 'striped'
+        });
+
         doc.save(`${reportFileName}.pdf`);
     }
 
